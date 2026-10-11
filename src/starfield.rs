@@ -11,21 +11,16 @@ pub struct StarfieldMaterialPlugin;
 impl Plugin for StarfieldMaterialPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<StarfieldMaterial>::default());
-        app.add_systems(Update, (update_material, update_starfield));
+        app.add_systems(Update, update_material);
+        app.add_systems(
+            PostUpdate,
+            update_starfield.before(TransformSystems::Propagate),
+        );
     }
 }
 
-#[derive(Component)]
-#[require(Mesh2d)]
-#[relationship(relationship_target = StarfieldCamera)]
-pub struct StarfieldFor(Entity);
-
-#[derive(Component)]
-#[relationship_target(relationship = StarfieldFor)]
-pub struct StarfieldCamera(Vec<Entity>);
-
 fn update_starfield(
-    mut starfields: Query<(&StarfieldFor, &mut Transform)>,
+    mut starfields: Query<(&ChildOf, &mut Transform)>,
     cameras: Query<(&Camera, &GlobalTransform)>,
 ) {
     starfields
@@ -56,8 +51,9 @@ fn update_starfield(
             transform.translation.y = camera_transform.translation().y;
 
             // Scale assuming a default 1x1 quad mesh unit size
-            transform.scale.x = world_size.x;
-            transform.scale.y = world_size.y;
+            // Idk ts isn't updating properly every frame so just scale it :sob:
+            transform.scale.x = world_size.x * 2.0;
+            transform.scale.y = world_size.y * 2.0;
         });
 }
 
