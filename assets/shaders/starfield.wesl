@@ -20,7 +20,7 @@ fn hash_2_1(p: vec2f) -> f32 {
 }
 
 struct MaterialParams {
-    time: f32,
+    time: vec4f,
 }
 
 const STAR_MIN_RADIUS = 2.0;
@@ -63,7 +63,7 @@ fn main(mesh: VertexOutput) -> @location(0) vec4<f32> {
             var star_glow = 1.0 - smoothstep(grid_radius - 0.002, grid_radius + 0.002, dist);
 
             // Modulate star brightness over time
-            let twinkle = sin(material.time * 1.0 + hash_2_1(star_pos) * 6.28318) * 0.5 + 0.5;
+            let twinkle = sin(material.time.x * 1.0 + hash_2_1(star_pos) * 6.28318) * 0.5 + 0.5;
             star_glow *= smoothstep(0.1, 1.0, twinkle);
 
             final_color += star_glow * vec3<f32>(0.9, 0.95, 1.0);

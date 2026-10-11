@@ -4,11 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.20.0", default-features = false, features = ["2d", "ui", "audio", "dev", "bevy_pbr"] }
+bevy = { version = "0.20.0", default-features = false, features = ["2d", "ui", "audio"] }
 avian2d = { git = "https://github.com/andriyDev/avian/", branch="bevy-0.20" }
 leafwing-input-manager = { git = "https://github.com/Leafwing-Studios/leafwing-input-manager" }
 log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
 rand = "0.10.3"
+getrandom = { version = "0.4.3", features = ["wasm_js"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+bevy = { version = "0.20.0", default-features = false, features = ["dev", "bevy_pbr"] }
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

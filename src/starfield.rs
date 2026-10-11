@@ -55,8 +55,9 @@ fn update_starfield(
 
 #[derive(Asset, TypePath, AsBindGroup, Clone, Default)]
 pub struct StarfieldMaterial {
+    // On webgl non-16 byte allignment causes an error
     #[uniform(0)]
-    time: f32,
+    time: Vec4,
 }
 
 impl Material2d for StarfieldMaterial {
@@ -67,6 +68,6 @@ impl Material2d for StarfieldMaterial {
 
 fn update_material(time: Res<Time>, mut materials: ResMut<Assets<StarfieldMaterial>>) {
     materials.iter_mut().for_each(|(_, material)| {
-        material.time = time.elapsed_secs();
+        material.time = Vec4::new(time.elapsed_secs(), 0.0, 0.0, 0.0);
     });
 }

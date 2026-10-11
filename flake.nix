@@ -17,7 +17,11 @@
     pkgs = import nixpkgs {inherit system overlays;};
     lib = pkgs.lib;
 
-    rustToolchain = pkgs.fenix.stable.toolchain;
+    rustToolchain = with pkgs.fenix;
+      combine [
+        stable.toolchain
+        targets.wasm32-unknown-unknown.stable.rust-std
+      ];
 
     bevyDeps = with pkgs; [
       pkg-config
