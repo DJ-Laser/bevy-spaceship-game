@@ -8,7 +8,8 @@ struct PrevPhysicsState<T>(T);
 #[require(PrevPhysicsState<Position>)]
 pub struct Position(pub Vec2); // In units
 
-#[derive(Component)]
+#[derive(Component, Default, Clone, Copy)]
+#[require(Position)]
 pub struct Velocity(pub Vec2); // In units per second
 
 // Angular movement components
@@ -16,7 +17,8 @@ pub struct Velocity(pub Vec2); // In units per second
 #[require(PrevPhysicsState<Angle>)]
 pub struct Angle(pub f32); // In radians
 
-#[derive(Component)]
+#[derive(Component, Default, Clone, Copy)]
+#[require(Angle)]
 pub struct AngularVelocity(pub f32); // In radians per second
 
 fn update_prev_state<T>(mut query: Query<(&T, &mut PrevPhysicsState<T>)>)
@@ -75,11 +77,11 @@ pub struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
-            FixedUpdate,
+            FixedPostUpdate,
             (update_prev_state::<Position>, apply_velocity).chain(),
         );
         app.add_systems(
-            FixedUpdate,
+            FixedPostUpdate,
             (update_prev_state::<Angle>, apply_angular_velocity).chain(),
         );
         app.add_systems(Update, transform_interpolation);
