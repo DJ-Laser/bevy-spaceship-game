@@ -46,14 +46,10 @@ fn update_starfield(
 
             let world_size = (world_max - world_min).abs();
 
-            // Center the mesh on the camera's position
-            transform.translation.x = camera_transform.translation().x;
-            transform.translation.y = camera_transform.translation().y;
-
             // Scale assuming a default 1x1 quad mesh unit size
             // Idk ts isn't updating properly every frame so just scale it :sob:
-            transform.scale.x = world_size.x * 2.0;
-            transform.scale.y = world_size.y * 2.0;
+            transform.scale.x = world_size.x;
+            transform.scale.y = world_size.y;
         });
 }
 
