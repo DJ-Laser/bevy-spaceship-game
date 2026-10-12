@@ -10,7 +10,7 @@ use crate::input::PlayerAction;
 use super::{InactiveSystem, PowerConsumer, Spaceship};
 
 /// Engines that propel the ship forward
-#[derive(Component)]
+#[derive(Component, Debug, Default, Clone)]
 #[require(PowerConsumer)]
 pub struct PlasmaEngine {
     pub engine_max_velocity: f32,
@@ -58,7 +58,7 @@ pub fn apply_engine_thrust(
 }
 
 /// Engines that propel the ship forward
-#[derive(Component)]
+#[derive(Component, Debug, Default, Clone)]
 #[require(PowerConsumer)]
 pub struct TurningSystems {
     pub turn_max_speed: f32,

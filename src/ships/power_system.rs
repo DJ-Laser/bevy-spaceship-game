@@ -5,7 +5,7 @@ use bevy::{
     prelude::*,
 };
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Default, Clone)]
 pub struct PowerSource {
     /// The maximum amount of power this system can produce.
     pub generation_capacity: f32,
@@ -19,7 +19,7 @@ impl PowerSource {
     }
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Default, Clone)]
 pub struct PowerStorage {
     /// The total amount of energy (power * seconds) this system can store.
     pub storage_capacity: f32,
@@ -36,7 +36,7 @@ impl PowerStorage {
     }
 }
 
-#[derive(Component, Debug, Default)]
+#[derive(Component, Debug, Default, Clone)]
 pub struct PowerConsumer {
     component_requested_power: HashMap<ComponentId, f32>,
     total_requested_power: f32,

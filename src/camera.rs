@@ -6,17 +6,49 @@ use bevy::{
     sprite_render::{Material2d, Material2dPlugin},
 };
 
-pub struct StarfieldMaterialPlugin;
+pub struct CameraPlugin;
 
-impl Plugin for StarfieldMaterialPlugin {
+impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<StarfieldMaterial>::default());
         app.add_systems(Update, update_material);
         app.add_systems(
             PostUpdate,
-            update_starfield.before(TransformSystems::Propagate),
+            (update_camera, update_starfield).after(TransformSystems::Propagate),
         );
     }
+}
+
+#[derive(SceneComponent, FromTemplate, Debug, Clone)]
+#[require(Camera2d)]
+pub struct MainCamera {
+    pub follow: Entity,
+}
+
+impl MainCamera {
+    fn scene() -> impl Scene {
+        bsn! {
+            #MainCamera
+            Children [
+                Mesh2d(asset_value(Rectangle::default()))
+                MeshMaterial2d<StarfieldMaterial>(asset_value(StarfieldMaterial::default()))
+            ]
+        }
+    }
+}
+
+fn update_camera(
+    mut cameras: Query<(&MainCamera, &mut Transform)>,
+    entities: Query<&GlobalTransform, Without<MainCamera>>,
+) {
+    cameras.iter_mut().for_each(|(camera, mut transform)| {
+        let Ok(target) = entities.get(camera.follow) else {
+            return;
+        };
+
+        transform.translation.x = target.translation().x;
+        transform.translation.y = target.translation().y;
+    });
 }
 
 fn update_starfield(
@@ -54,7 +86,7 @@ fn update_starfield(
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Clone, Default)]
-pub struct StarfieldMaterial {
+struct StarfieldMaterial {
     // On webgl non-16 byte allignment causes an error
     #[uniform(0)]
     time: Vec4,

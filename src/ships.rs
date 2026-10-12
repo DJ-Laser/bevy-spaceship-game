@@ -24,9 +24,9 @@ impl Plugin for ShipsPlugin {
 }
 
 /// A marker component that enables the spaceship update cycle for this entity.
-#[derive(Component)]
+#[derive(Component, Debug, Default, Clone)]
 pub struct Spaceship;
 
 /// A marker component indicating that this subsystem is inactive and should not participate in the ship's update cycle.
-#[derive(Component)]
+#[derive(Component, Debug, Default, Clone)]
 pub struct InactiveSystem;
