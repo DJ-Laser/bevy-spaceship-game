@@ -1,9 +1,5 @@
 use super::{InactiveSystem, Spaceship};
-use avian2d::parry::utils::hashmap::HashMap;
-use bevy::{
-    ecs::{component::ComponentId, relationship::Relationship as _},
-    prelude::*,
-};
+use bevy::{ecs::relationship::Relationship as _, prelude::*};
 
 #[derive(Component, Debug, Default, Clone)]
 pub struct PowerSource {
@@ -38,7 +34,6 @@ impl PowerStorage {
 
 #[derive(Component, Debug, Default, Clone)]
 pub struct PowerConsumer {
-    component_requested_power: HashMap<ComponentId, f32>,
     total_requested_power: f32,
     allocated_power: f32,
 }
@@ -46,7 +41,6 @@ pub struct PowerConsumer {
 impl PowerConsumer {
     /// Resets the power demands for this system
     pub fn clear(&mut self) {
-        self.component_requested_power.clear();
         self.total_requested_power = 0.0;
         self.allocated_power = 0.0;
     }
@@ -62,24 +56,17 @@ impl PowerConsumer {
     }
 
     /// Request power for a component of a system
-    pub fn request_power(&mut self, id: ComponentId, requested_power: f32) {
-        *self.component_requested_power.entry(id).or_insert(0.0) += requested_power;
+    pub fn request_power(&mut self, requested_power: f32) {
         self.total_requested_power += requested_power;
     }
 
-    /// Get the alloacted power for a component of a system
-    pub fn allocated_power(&self, id: ComponentId) -> f32 {
+    /// Get the ratio of power allocated to power requested
+    pub fn allocated_fraction(&self) -> f32 {
         if self.total_requested_power < f32::EPSILON {
-            return 0.0;
+            return 1.0;
         }
 
-        let requested_power = self
-            .component_requested_power
-            .get(&id)
-            .copied()
-            .unwrap_or(0.0);
-
-        (requested_power / self.total_requested_power) * self.allocated_power
+        self.allocated_power / self.total_requested_power
     }
 }
 
