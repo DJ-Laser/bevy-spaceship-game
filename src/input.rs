@@ -13,13 +13,11 @@ impl Plugin for PlayerInputPlugin {
 
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect)]
 pub enum PlayerAction {
-    // Movement
-    Accelerate,
-    Reverse,
+    #[actionlike(Axis)]
+    Thrust,
     #[actionlike(Axis)]
     Turn,
 
-    // Weapons
     FirePrimary,
     FireMissiles,
 }
@@ -27,14 +25,12 @@ pub enum PlayerAction {
 pub fn default_player_input_map() -> InputMap<PlayerAction> {
     let mut input_map = InputMap::default();
 
-    input_map.insert(PlayerAction::Accelerate, GamepadButton::RightTrigger2);
-    input_map.insert(PlayerAction::Reverse, GamepadButton::North);
+    input_map.insert_axis(PlayerAction::Thrust, GamepadAxis::LeftStickY);
     input_map.insert_axis(PlayerAction::Turn, GamepadAxis::LeftStickX);
     input_map.insert(PlayerAction::FirePrimary, GamepadButton::West);
     input_map.insert(PlayerAction::FireMissiles, GamepadButton::South);
 
-    input_map.insert(PlayerAction::Accelerate, KeyCode::KeyW);
-    input_map.insert(PlayerAction::Reverse, KeyCode::KeyS);
+    input_map.insert_axis(PlayerAction::Thrust, VirtualAxis::ws());
     input_map.insert_axis(PlayerAction::Turn, VirtualAxis::ad());
     input_map.insert(PlayerAction::FirePrimary, MouseButton::Left);
     input_map.insert(PlayerAction::FireMissiles, MouseButton::Right);

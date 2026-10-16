@@ -1,5 +1,6 @@
-use super::{InactiveSystem, Spaceship};
 use bevy::{ecs::relationship::Relationship as _, prelude::*};
+
+use crate::ships::{InactiveSystem, Spaceship};
 
 #[derive(Component, Debug, Default, Clone)]
 pub struct PowerSource {

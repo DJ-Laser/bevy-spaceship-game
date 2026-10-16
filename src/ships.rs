@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 
-mod movement;
+mod controller;
+mod engines;
 mod power_system;
 
-pub use movement::{ForwardEngine, InertialDampener, ReverseEngine, TurningEngine};
+pub use engines::{ForwardEngine, ReverseEngine, TurningEngine};
 pub use power_system::{PowerConsumer, PowerSource, PowerStorage};
 
 pub struct ShipsPlugin;
@@ -13,19 +14,20 @@ impl Plugin for ShipsPlugin {
         app.add_systems(
             FixedUpdate,
             (
-                power_system::clear_power_demands,
                 (
-                    movement::request_power::<ForwardEngine>,
-                    movement::request_power::<ReverseEngine>,
-                    movement::request_power::<TurningEngine>,
-                    movement::request_power::<InertialDampener>,
+                    power_system::clear_power_demands,
+                    controller::control_player_ship,
+                ),
+                (
+                    engines::request_engine_power::<ForwardEngine>,
+                    engines::request_engine_power::<ReverseEngine>,
+                    engines::request_engine_power::<TurningEngine>,
                 ),
                 power_system::allocate_ship_power,
                 (
-                    movement::apply_movement::<ForwardEngine>,
-                    movement::apply_movement::<ReverseEngine>,
-                    movement::apply_movement::<TurningEngine>,
-                    movement::apply_movement::<InertialDampener>,
+                    engines::fire_engine::<ForwardEngine>,
+                    engines::fire_engine::<ReverseEngine>,
+                    engines::fire_engine::<TurningEngine>,
                 ),
             )
                 .chain(),

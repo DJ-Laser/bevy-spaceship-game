@@ -14,7 +14,11 @@ mod ships;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(PhysicsPlugins::default().set(PhysicsInterpolationPlugin::interpolate_all()))
+        .add_plugins(
+            PhysicsPlugins::default()
+                .with_length_unit(100.0)
+                .set(PhysicsInterpolationPlugin::interpolate_all()),
+        )
         .insert_resource(Gravity(Vec2::ZERO))
         .add_plugins(CameraPlugin)
         .add_plugins(ShipsPlugin)
@@ -34,13 +38,13 @@ struct VelocityHud(Entity);
 
 fn energy_hud_text(
     hud: Single<(&EnergyHud, &mut Text)>,
-    batteries: Query<(&ChildOf, &PowerStorage), Without<InactiveSystem>>,
+    energy_storages: Query<(&ChildOf, &PowerStorage), Without<InactiveSystem>>,
 ) {
     let (ship_id, mut text) = hud.into_inner();
     let mut total_capacity = 0.0;
     let mut total_stored = 0.0;
 
-    batteries.iter().for_each(|(p, storage)| {
+    energy_storages.iter().for_each(|(p, storage)| {
         if p.get() != ship_id.0 {
             return;
         }
@@ -55,16 +59,17 @@ fn energy_hud_text(
 
 fn velocity_hud_text(
     hud: Single<(&VelocityHud, &mut Text)>,
-    ships: Query<(Entity, &LinearVelocity), Without<InactiveSystem>>,
+    ships: Query<(Entity, &LinearVelocity, &AngularVelocity), Without<InactiveSystem>>,
 ) {
     let (ship_id, mut text) = hud.into_inner();
 
-    let Some((_, velocity)) = ships.iter().find(|(ship, _)| *ship == ship_id.0) else {
+    let Some((_, lin_vel, ang_vel)) = ships.iter().find(|(ship, _, _)| *ship == ship_id.0) else {
         return;
     };
 
-    let magnitude = velocity.length();
-    text.0 = format!("Velocity: {magnitude:.2}");
+    let linear = lin_vel.length();
+    let angular = ang_vel.abs();
+    text.0 = format!("Velocity: {linear:.2}\nAngular: {angular:.2}");
 }
 
 fn scene() -> impl SceneList {
@@ -118,26 +123,20 @@ fn player() -> impl Scene {
             --
             Name("Engine XN-2000")
             ships::ForwardEngine {
-                engine_force: 500000.0,
+                forward_thrust: 500000.0,
                 power_draw: 700.0
             }
             --
             Name("Engine RH-500")
             ships::ReverseEngine {
-                engine_force: 100000.0,
+                reverse_thrust: 100000.0,
                 power_draw: 200.0
             }
             --
             Name("Rcs RF-150")
             ships::TurningEngine {
-                turn_torque: 100000000.0,
+                turn_torque: 1000000000.0,
                 power_draw: 50.0
-            }
-            --
-            Name("Dampers DX14")
-            ships::InertialDampener {
-                linear_damping_constant: 5000.0,
-                angular_damping_constant: 100000000.0,
             }
         ]
     }
