@@ -1,5 +1,5 @@
 use avian2d::prelude::*;
-use bevy::{ecs::relationship::Relationship as _, prelude::*};
+use bevy::prelude::*;
 use leafwing_input_manager::action_state::ActionState;
 
 use crate::{
@@ -14,7 +14,7 @@ pub fn control_player_ship(
     time: Res<Time>,
     ships: Query<
         (
-            Entity,
+            &Children,
             &ActionState<PlayerAction>,
             Forces,
             &ComputedAngularInertia,
@@ -22,18 +22,17 @@ pub fn control_player_ship(
         With<Spaceship>,
     >,
     engines: Query<AnyOf<(&ForwardEngine, &ReverseEngine, &TurningEngine)>>,
-    mut systems: Query<(&ChildOf, &mut ActionState<EngineAction>), Without<InactiveSystem>>,
+    mut systems: Query<&mut ActionState<EngineAction>, Without<InactiveSystem>>,
 ) {
     ships
         .iter()
-        .for_each(|(spaceship_id, player_actions, forces, angular_inertia)| {
+        .for_each(|(children, player_actions, forces, angular_inertia)| {
             let mut total_forward_thrust = 0.0;
             let mut total_reverse_thrust = 0.0;
             let mut total_turn_torque = 0.0;
 
-            engines
-                .iter()
-                .for_each(|(forward_engine, reverse_engine, turn_engine)| {
+            engines.iter_many(children).matched().for_each(
+                |(forward_engine, reverse_engine, turn_engine)| {
                     if let Some(forward_engine) = forward_engine {
                         total_forward_thrust += forward_engine.forward_thrust;
                     }
@@ -45,13 +44,11 @@ pub fn control_player_ship(
                     if let Some(turn_engine) = turn_engine {
                         total_turn_torque += turn_engine.turn_torque;
                     }
-                });
+                },
+            );
 
-            systems.iter_mut().for_each(|(p, mut engine_actions)| {
-                if p.get() != spaceship_id {
-                    return;
-                }
-
+            let mut iter = systems.iter_many_mut(children).matched();
+            while let Some(mut engine_actions) = iter.fetch_next() {
                 engine_actions.set_value(
                     &EngineAction::Thrust,
                     player_actions.value(&PlayerAction::Thrust),
@@ -66,6 +63,6 @@ pub fn control_player_ship(
                     / time.delta_secs();
 
                 engine_actions.set_value(&EngineAction::Turn, torque_needed / total_turn_torque);
-            });
+            }
         });
 }

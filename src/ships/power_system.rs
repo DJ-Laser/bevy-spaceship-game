@@ -1,4 +1,4 @@
-use bevy::{ecs::relationship::Relationship as _, prelude::*};
+use bevy::prelude::*;
 
 use crate::ships::{InactiveSystem, Spaceship};
 
@@ -41,19 +41,9 @@ pub struct PowerConsumer {
 
 impl PowerConsumer {
     /// Resets the power demands for this system
-    pub fn clear(&mut self) {
+    fn clear(&mut self) {
         self.total_requested_power = 0.0;
         self.allocated_power = 0.0;
-    }
-
-    /// Get the amount of power this system needs to function at full capacity.
-    pub fn requested_power(&self) -> f32 {
-        self.total_requested_power
-    }
-
-    /// Set the amount of power available for this system to use.
-    pub fn set_allocated_power(&mut self, allocated_power: f32) {
-        self.allocated_power = allocated_power;
     }
 
     /// Request power for a component of a system
@@ -79,32 +69,29 @@ pub fn clear_power_demands(mut consumers: Query<&mut PowerConsumer, Without<Inac
 
 pub fn allocate_ship_power(
     time: Res<Time>,
-    spaceships: Query<Entity, With<Spaceship>>,
-    sources: Query<(&ChildOf, &PowerSource), Without<InactiveSystem>>,
-    mut storages: Query<(&ChildOf, &mut PowerStorage), Without<InactiveSystem>>,
-    mut consumers: Query<(&ChildOf, &mut PowerConsumer), Without<InactiveSystem>>,
+    spaceships: Query<&Children, With<Spaceship>>,
+    sources: Query<&PowerSource, Without<InactiveSystem>>,
+    mut storages: Query<&mut PowerStorage, Without<InactiveSystem>>,
+    mut consumers: Query<&mut PowerConsumer, Without<InactiveSystem>>,
 ) {
-    spaceships.iter().for_each(|spaceship_id| {
+    spaceships.iter().for_each(|children| {
         let total_generation: f32 = sources
-            .iter()
-            .filter(|(p, _)| p.get() == spaceship_id)
-            .map(|(_, source)| source.generation_capacity)
+            .iter_many(children)
+            .matched()
+            .map(|source| source.generation_capacity)
             .sum();
 
         let total_requested_consumption: f32 = consumers
-            .iter()
-            .filter(|(p, _)| p.get() == spaceship_id)
-            .map(|(_, consumer)| consumer.requested_power())
+            .iter_many(children)
+            .matched()
+            .map(|consumer| consumer.total_requested_power)
             .sum();
 
         // Energy (power per second) surplus/deficit to be absorbed by the power storage systems
         let mut energy_delta = (total_generation - total_requested_consumption) * time.delta_secs();
 
-        for (p, mut storage) in storages.iter_mut() {
-            if p.get() != spaceship_id {
-                continue;
-            }
-
+        let mut iter = storages.iter_many_mut(children).matched();
+        while let Some(mut storage) = iter.fetch_next() {
             let min_energy_change = -storage.stored_energy;
             let max_energy_change = storage.storage_capacity - storage.stored_energy;
             let energy_change = energy_delta.clamp(min_energy_change, max_energy_change);
@@ -120,24 +107,16 @@ pub fn allocate_ship_power(
         }
 
         // If excess energy is left over, it is simply wasted.
-        if energy_delta >= 0.0 {
-            consumers
-                .iter_mut()
-                .filter(|(p, _)| p.get() == spaceship_id)
-                .for_each(|(_, mut consumer)| {
-                    let requested_power = consumer.requested_power();
-                    consumer.set_allocated_power(requested_power);
-                });
-
-            return;
-        }
+        let allocated_fraction = if energy_delta >= 0.0 {
+            1.0
+        } else {
+            (total_generation + energy_delta) / total_requested_consumption
+        };
 
         //TODO: Properly allocate reserve power to priority systems
-        consumers
-            .iter_mut()
-            .filter(|(p, _)| p.get() == spaceship_id)
-            .for_each(|(_, mut consumer)| {
-                consumer.allocated_power = 0.0;
-            });
+        let mut iter = consumers.iter_many_mut(children).matched();
+        while let Some(mut consumer) = iter.fetch_next() {
+            consumer.allocated_power = consumer.total_requested_power * allocated_fraction;
+        }
     });
 }

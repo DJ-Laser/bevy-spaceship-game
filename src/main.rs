@@ -1,5 +1,5 @@
 use avian2d::prelude::*;
-use bevy::{ecs::relationship::Relationship as _, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
     camera::CameraPlugin,
@@ -38,20 +38,24 @@ struct VelocityHud(Entity);
 
 fn energy_hud_text(
     hud: Single<(&EnergyHud, &mut Text)>,
-    energy_storages: Query<(&ChildOf, &PowerStorage), Without<InactiveSystem>>,
+    spaceships: Query<&Children, With<Spaceship>>,
+    energy_storages: Query<&PowerStorage, Without<InactiveSystem>>,
 ) {
     let (ship_id, mut text) = hud.into_inner();
     let mut total_capacity = 0.0;
     let mut total_stored = 0.0;
 
-    energy_storages.iter().for_each(|(p, storage)| {
-        if p.get() != ship_id.0 {
-            return;
-        }
+    let Ok(children) = spaceships.get(ship_id.0) else {
+        return;
+    };
 
-        total_capacity += storage.storage_capacity;
-        total_stored += storage.stored_energy;
-    });
+    energy_storages
+        .iter_many(children)
+        .matched()
+        .for_each(|storage| {
+            total_capacity += storage.storage_capacity;
+            total_stored += storage.stored_energy;
+        });
 
     let percentage = (total_stored / total_capacity) * 100.0;
     text.0 = format!("Energy: {percentage:.0}%");

@@ -1,5 +1,4 @@
 use bevy::{
-    ecs::relationship::Relationship,
     prelude::*,
     render::render_resource::AsBindGroup,
     shader::ShaderRef,
@@ -52,37 +51,27 @@ fn update_camera(
 }
 
 fn update_starfield(
-    mut starfields: Query<(&ChildOf, &mut Transform)>,
-    cameras: Query<(&Camera, &GlobalTransform)>,
+    cameras: Query<(&Children, &Camera, &Projection)>,
+    mut starfields: Query<&mut Transform, With<MeshMaterial2d<StarfieldMaterial>>>,
 ) {
-    starfields
-        .iter_mut()
-        .for_each(|(starfield, mut transform)| {
-            let Ok((camera, camera_transform)) = cameras.get(starfield.get()) else {
-                return;
-            };
+    cameras.iter().for_each(|(children, camera, projection)| {
+        let Some(logical_size) = camera.logical_viewport_size() else {
+            return;
+        };
 
-            let Some(world_min) = camera
-                .ndc_to_world(camera_transform, Vec3::new(-1.0, -1.0, 1.0))
-                .map(Vec3::truncate)
-            else {
-                return;
-            };
+        let Projection::Orthographic(ortho_proj) = projection else {
+            return;
+        };
 
-            let Some(world_max) = camera
-                .ndc_to_world(camera_transform, Vec3::new(1.0, 1.0, 1.0))
-                .map(Vec3::truncate)
-            else {
-                return;
-            };
+        let view_size = logical_size * ortho_proj.scale;
 
-            let world_size = (world_max - world_min).abs();
-
+        let mut iter = starfields.iter_many_mut(children).matched();
+        while let Some(mut transform) = iter.fetch_next() {
             // Scale assuming a default 1x1 quad mesh unit size
-            // Idk ts isn't updating properly every frame so just scale it :sob:
-            transform.scale.x = world_size.x;
-            transform.scale.y = world_size.y;
-        });
+            transform.scale.x = view_size.x;
+            transform.scale.y = view_size.y;
+        }
+    });
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Clone, Default)]

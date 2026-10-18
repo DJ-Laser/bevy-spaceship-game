@@ -2,7 +2,7 @@ use avian2d::{dynamics::rigid_body::forces::ForcesItem, prelude::*};
 use bevy::{ecs::relationship::Relationship as _, prelude::*};
 use leafwing_input_manager::{Actionlike, action_state::ActionState};
 
-use crate::ships::{InactiveSystem, PowerConsumer, Spaceship};
+use crate::ships::{InactiveSystem, PowerConsumer};
 
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect)]
 #[actionlike(Axis)]
@@ -18,45 +18,38 @@ pub trait EngineComponent: Component {
 }
 
 pub fn request_engine_power<C: EngineComponent>(
-    spaceships: Query<(Entity, &ActionState<EngineAction>), With<Spaceship>>,
-    mut components: Query<(&ChildOf, &C, &mut PowerConsumer), Without<InactiveSystem>>,
+    mut engines: Query<
+        (&C, &ActionState<EngineAction>, &mut PowerConsumer),
+        Without<InactiveSystem>,
+    >,
 ) {
-    spaceships.iter().for_each(|(spaceship_id, actions)| {
-        let throttle_abs = C::get_throttle(actions).abs();
+    engines
+        .iter_mut()
+        .for_each(|(component, actions, mut consumer)| {
+            let throttle_abs = C::get_throttle(actions).abs();
 
-        components
-            .iter_mut()
-            .for_each(|(p, component, mut consumer)| {
-                if p.get() != spaceship_id {
-                    return;
-                }
-
-                consumer.request_power(throttle_abs * component.get_max_power_draw());
-            });
-    });
+            consumer.request_power(throttle_abs * component.get_max_power_draw());
+        });
 }
 
 pub fn fire_engine<C: EngineComponent>(
-    mut spaceships: Query<(Entity, Forces), With<Spaceship>>,
-    components: Query<
+    mut spaceships: Query<Forces>,
+    engines: Query<
         (&ChildOf, &C, &ActionState<EngineAction>, &PowerConsumer),
         Without<InactiveSystem>,
     >,
 ) {
-    spaceships
-        .iter_mut()
-        .for_each(|(spaceship_id, mut forces)| {
-            components
-                .iter()
-                .for_each(|(p, component, actions, consumer)| {
-                    let throttle = C::get_throttle(actions);
-                    if p.get() != spaceship_id {
-                        return;
-                    }
+    engines
+        .iter()
+        .for_each(|(p, component, actions, consumer)| {
+            let Ok(mut forces) = spaceships.get_mut(p.get()) else {
+                return;
+            };
 
-                    let adjusted_throttle = throttle * consumer.allocated_fraction();
-                    component.apply_movement(adjusted_throttle, &mut forces);
-                });
+            let throttle = C::get_throttle(actions);
+
+            let adjusted_throttle = throttle * consumer.allocated_fraction();
+            component.apply_movement(adjusted_throttle, &mut forces);
         });
 }
 
