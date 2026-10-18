@@ -84,7 +84,7 @@ pub fn fire_weapons(
 #[derive(Component, Default, Clone)]
 pub struct ShipHull {
     pub max_hp: f32,
-    current_hp: f32,
+    pub current_hp: f32,
 }
 
 pub fn init_ship_hull(mut hulls: Query<&mut ShipHull, Added<ShipHull>>) {

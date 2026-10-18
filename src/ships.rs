@@ -5,6 +5,7 @@ mod engines;
 mod power_system;
 mod weapons;
 
+pub use controller::dumb_fire::DumbFireShipController;
 pub use engines::{ForwardEngine, ReverseEngine, TurningEngine};
 pub use power_system::{PowerSource, PowerStorage};
 pub use weapons::{ProjectileWeapon, ShipHull};
@@ -19,7 +20,8 @@ impl Plugin for ShipsPlugin {
                 (
                     weapons::init_ship_hull,
                     power_system::clear_power_demands,
-                    controller::control_player_ship,
+                    controller::player::control_player_ship,
+                    controller::dumb_fire::control_ship,
                 ),
                 (
                     engines::request_engine_power::<ForwardEngine>,

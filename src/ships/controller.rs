@@ -1,81 +1,46 @@
-use avian2d::prelude::*;
-use bevy::prelude::*;
-use leafwing_input_manager::action_state::ActionState;
+use bevy::{ecs::entity::EntityEquivalent, prelude::*};
 
-use crate::{
-    input::PlayerAction,
-    ships::{
-        ForwardEngine, InactiveSystem, ReverseEngine, Spaceship, TurningEngine,
-        engines::EngineAction,
-        weapons::{ProjectileWeapon, WeaponAction},
-    },
-};
+use crate::ships::{ForwardEngine, InactiveSystem, ReverseEngine, TurningEngine};
 
-pub fn control_player_ship(
-    time: Res<Time>,
-    ships: Query<
-        (
-            &Children,
-            &ActionState<PlayerAction>,
-            Forces,
-            &ComputedAngularInertia,
-        ),
-        With<Spaceship>,
-    >,
-    engines: Query<
-        AnyOf<(&ForwardEngine, &ReverseEngine, &TurningEngine)>,
-        Without<InactiveSystem>,
-    >,
-    mut engine_actions: Query<&mut ActionState<EngineAction>>,
-    mut primary_weapon_actions: Query<&mut ActionState<WeaponAction>, With<ProjectileWeapon>>,
-) {
-    ships
-        .iter()
-        .for_each(|(children, player_actions, forces, angular_inertia)| {
-            let mut total_forward_thrust = 0.0;
-            let mut total_reverse_thrust = 0.0;
-            let mut total_turn_torque = 0.0;
+pub mod dumb_fire;
+pub mod player;
 
-            engines.iter_many(children).matched().for_each(
-                |(forward_engine, reverse_engine, turn_engine)| {
-                    if let Some(forward_engine) = forward_engine {
-                        total_forward_thrust += forward_engine.forward_thrust;
-                    }
+struct EngineTotals {
+    forward_thrust: f32,
+    reverse_thrust: f32,
+    turn_torque: f32,
+}
 
-                    if let Some(reverse_engine) = reverse_engine {
-                        total_reverse_thrust += reverse_engine.reverse_thrust;
-                    }
+impl EngineTotals {
+    fn from_query<EntityList: IntoIterator<Item: EntityEquivalent>>(
+        children: EntityList,
+        engines: Query<
+            AnyOf<(&ForwardEngine, &ReverseEngine, &TurningEngine)>,
+            Without<InactiveSystem>,
+        >,
+    ) -> Self {
+        let mut totals = Self {
+            forward_thrust: 0.0,
+            reverse_thrust: 0.0,
+            turn_torque: 0.0,
+        };
 
-                    if let Some(turn_engine) = turn_engine {
-                        total_turn_torque += turn_engine.turn_torque;
-                    }
-                },
-            );
+        engines.iter_many(children).matched().for_each(
+            |(forward_engine, reverse_engine, turn_engine)| {
+                if let Some(forward_engine) = forward_engine {
+                    totals.forward_thrust += forward_engine.forward_thrust;
+                }
 
-            let mut iter = engine_actions.iter_many_mut(children).matched();
-            while let Some(mut engine_actions) = iter.fetch_next() {
-                engine_actions.set_value(
-                    &EngineAction::Thrust,
-                    player_actions.value(&PlayerAction::Thrust),
-                );
+                if let Some(reverse_engine) = reverse_engine {
+                    totals.reverse_thrust += reverse_engine.reverse_thrust;
+                }
 
-                let goal_angular_velocity = 0.1
-                    * (total_turn_torque * angular_inertia.inverse())
-                    * player_actions.clamped_value(&PlayerAction::Turn);
+                if let Some(turn_engine) = turn_engine {
+                    totals.turn_torque += turn_engine.turn_torque;
+                }
+            },
+        );
 
-                let torque_needed = angular_inertia.value()
-                    * (-goal_angular_velocity - forces.angular_velocity())
-                    / time.delta_secs();
-
-                engine_actions.set_value(&EngineAction::Turn, torque_needed / total_turn_torque);
-            }
-
-            let mut iter = primary_weapon_actions.iter_many_mut(children).matched();
-            while let Some(mut weapon_actions) = iter.fetch_next() {
-                weapon_actions.set_button_value(
-                    &WeaponAction::Fire,
-                    player_actions.button_value(&PlayerAction::FirePrimary),
-                );
-            }
-        });
+        totals
+    }
 }
