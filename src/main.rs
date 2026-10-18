@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::{
     camera::CameraPlugin,
     input::PlayerInputPlugin,
-    ships::{InactiveSystem, PowerStorage, ShipsPlugin, Spaceship},
+    ships::{InactiveSystem, PowerStorage, ShipHull, ShipsPlugin, Spaceship},
 };
 
 mod camera;
@@ -77,9 +77,30 @@ fn velocity_hud_text(
 }
 
 fn scene() -> impl SceneList {
+    let mut asteriods = Vec::new();
+
+    for _ in 0..100 {
+        let radius = rand::random_range(10.0..30.0);
+        let hp = radius * 3.0;
+
+        let position = Vec2::new(
+            rand::random_range(-3000.0..3000.0),
+            rand::random_range(-3000.0..3000.0),
+        );
+
+        let scene = bsn! {
+            @asteroid(radius, hp)
+            Position(position)
+        };
+
+        asteriods.push(scene);
+    }
+
     bsn_list! {
         #PlayerShip
         @player()
+        --
+        {asteriods}
         --
         @camera::MainCamera {
             follow: #PlayerShip
@@ -100,6 +121,25 @@ fn scene() -> impl SceneList {
     }
 }
 
+fn asteroid(radius: f32, hp: f32) -> impl Scene {
+    let shape = Circle::new(radius);
+
+    bsn! {
+        input::default_player_input_map()
+        ShipHull {
+            max_hp: hp,
+        }
+
+        Transform::from_xyz(0.0, 0.0, 0.0)
+        Mesh2d(asset_value(shape))
+        MeshMaterial2d<ColorMaterial>(asset_value(Color::srgb(0.75, 0.75, 0.75)))
+
+        RigidBody::Dynamic
+        Collider::from(shape)
+        ColliderDensity(1.0)
+    }
+}
+
 fn player() -> impl Scene {
     let ship_shape = Triangle2d::new(
         Vec2 { x: -50.0, y: -50.0 },
@@ -110,6 +150,9 @@ fn player() -> impl Scene {
     bsn! {
         Spaceship
         input::default_player_input_map()
+        ShipHull {
+            max_hp: 1000.0,
+        }
 
         Transform::from_xyz(0.0, 0.0, 0.0)
         Mesh2d(asset_value(ship_shape))

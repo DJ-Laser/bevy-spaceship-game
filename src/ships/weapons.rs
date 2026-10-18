@@ -30,56 +30,105 @@ pub fn request_weapon_power(
     });
 }
 
-#[expect(clippy::type_complexity)]
 pub fn fire_weapons(
     time: Res<Time>,
     mut commands: Commands,
-    spaceships: Query<&LinearVelocity, With<Spaceship>>,
+    spaceships: Query<(&Position, &Rotation, &LinearVelocity), With<Spaceship>>,
     mut weapons: Query<
         (
             &ChildOf,
             &mut ProjectileWeapon,
             &ActionState<WeaponAction>,
             &mut PowerConsumer,
-            &GlobalTransform,
         ),
         Without<InactiveSystem>,
     >,
 ) {
     weapons
         .iter_mut()
-        .for_each(|(p, mut weapon, actions, consumer, transform)| {
+        .for_each(|(p, mut weapon, actions, consumer)| {
             if weapon.fire_cooldown > 0.0 {
                 weapon.fire_cooldown -= time.delta_secs() * consumer.allocated_fraction();
             }
 
             if weapon.fire_cooldown <= 0.0 && actions.pressed(&WeaponAction::Fire) {
-                let Ok(linear_velocity) = spaceships.get(p.get()) else {
+                let Ok((position, rotation, linear_velocity)) = spaceships.get(p.get()) else {
                     return;
                 };
 
-                let angle_z = transform.rotation().to_euler(EulerRot::XYZ).2;
-                let velocity = linear_velocity.0 + Vec2::Y.rotate_angle(angle_z) * weapon.velocity;
+                let velocity = linear_velocity.0 + rotation * Vec2::Y * weapon.velocity;
 
                 weapon.fire_cooldown = 1.0 / weapon.frequency;
-                println!("Fired");
-                commands.queue_spawn_scene(bsn! {
-                    Position({transform.translation().truncate()})
-                    LinearVelocity(velocity)
-                    RigidBody
-                    Projectile {
-                        owner: {p.get()}
-                        damage: 10.0,
-                    }
-                    MeshMaterial2d<ColorMaterial>(asset_value(Color::srgb(1.0, 1.0, 0.0)))
-                    Mesh2d(asset_value(Circle::new(2.5)))
-                });
+
+                let circle = Circle::new(2.5);
+                commands
+                    .queue_spawn_scene(bsn! {
+                        Position({position.0})
+                        LinearVelocity(velocity)
+                        RigidBody
+                        Collider::from(circle)
+                        ColliderDensity(1.0)
+                        CollisionEventsEnabled
+                        Projectile {
+                            owner: {p.get()}
+                            damage: 10.0,
+                        }
+                        MeshMaterial2d<ColorMaterial>(asset_value(Color::srgb(1.0, 1.0, 0.0)))
+                        Mesh2d(asset_value(circle))
+                    })
+                    .observe(apply_projectile_damage);
             }
         });
+}
+
+#[derive(Component, Default, Clone)]
+pub struct ShipHull {
+    pub max_hp: f32,
+    current_hp: f32,
+}
+
+pub fn init_ship_hull(mut hulls: Query<&mut ShipHull, Added<ShipHull>>) {
+    hulls.iter_mut().for_each(|mut hull| {
+        hull.current_hp = hull.max_hp;
+    });
+}
+
+pub fn remove_broken_hulls(mut commands: Commands, hulls: Query<(Entity, &ShipHull)>) {
+    hulls.iter().for_each(|(entity, hull)| {
+        if hull.current_hp <= 0.0 {
+            commands.entity(entity).despawn();
+        }
+    });
 }
 
 #[derive(Component, Clone, FromTemplate)]
 pub struct Projectile {
     owner: Entity,
     damage: f32,
+}
+
+fn apply_projectile_damage(
+    event: On<CollisionStart>,
+    mut commands: Commands,
+    projectiles: Query<(Entity, &Projectile)>,
+    mut hulls: Query<(Entity, Option<&ChildOf>, &mut ShipHull)>,
+) {
+    let Ok((projectile_id, projectile)) = projectiles.get(event.collider1) else {
+        return;
+    };
+
+    let Ok((hull_id, p, mut hull)) = hulls.get_mut(event.collider2) else {
+        return;
+    };
+
+    if projectile.owner == hull_id {
+        return;
+    } else if let Some(p) = p
+        && projectile.owner == p.get()
+    {
+        return;
+    }
+
+    hull.current_hp -= projectile.damage;
+    commands.entity(projectile_id).despawn();
 }

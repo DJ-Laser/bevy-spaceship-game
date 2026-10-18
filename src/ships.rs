@@ -7,7 +7,7 @@ mod weapons;
 
 pub use engines::{ForwardEngine, ReverseEngine, TurningEngine};
 pub use power_system::{PowerSource, PowerStorage};
-pub use weapons::ProjectileWeapon;
+pub use weapons::{ProjectileWeapon, ShipHull};
 
 pub struct ShipsPlugin;
 
@@ -17,6 +17,7 @@ impl Plugin for ShipsPlugin {
             FixedUpdate,
             (
                 (
+                    weapons::init_ship_hull,
                     power_system::clear_power_demands,
                     controller::control_player_ship,
                 ),
@@ -33,6 +34,7 @@ impl Plugin for ShipsPlugin {
                     engines::fire_engines::<TurningEngine>,
                     weapons::fire_weapons,
                 ),
+                weapons::remove_broken_hulls,
             )
                 .chain(),
         );
