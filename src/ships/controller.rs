@@ -7,6 +7,7 @@ use crate::{
     ships::{
         ForwardEngine, InactiveSystem, ReverseEngine, Spaceship, TurningEngine,
         engines::EngineAction,
+        weapons::{ProjectileWeapon, WeaponAction},
     },
 };
 
@@ -21,8 +22,12 @@ pub fn control_player_ship(
         ),
         With<Spaceship>,
     >,
-    engines: Query<AnyOf<(&ForwardEngine, &ReverseEngine, &TurningEngine)>>,
-    mut systems: Query<&mut ActionState<EngineAction>, Without<InactiveSystem>>,
+    engines: Query<
+        AnyOf<(&ForwardEngine, &ReverseEngine, &TurningEngine)>,
+        Without<InactiveSystem>,
+    >,
+    mut engine_actions: Query<&mut ActionState<EngineAction>>,
+    mut primary_weapon_actions: Query<&mut ActionState<WeaponAction>, With<ProjectileWeapon>>,
 ) {
     ships
         .iter()
@@ -47,7 +52,7 @@ pub fn control_player_ship(
                 },
             );
 
-            let mut iter = systems.iter_many_mut(children).matched();
+            let mut iter = engine_actions.iter_many_mut(children).matched();
             while let Some(mut engine_actions) = iter.fetch_next() {
                 engine_actions.set_value(
                     &EngineAction::Thrust,
@@ -63,6 +68,14 @@ pub fn control_player_ship(
                     / time.delta_secs();
 
                 engine_actions.set_value(&EngineAction::Turn, torque_needed / total_turn_torque);
+            }
+
+            let mut iter = primary_weapon_actions.iter_many_mut(children).matched();
+            while let Some(mut weapon_actions) = iter.fetch_next() {
+                weapon_actions.set_button_value(
+                    &WeaponAction::Fire,
+                    player_actions.button_value(&PlayerAction::FirePrimary),
+                );
             }
         });
 }

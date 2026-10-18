@@ -111,7 +111,7 @@ fn player() -> impl Scene {
         Spaceship
         input::default_player_input_map()
 
-        Transform::from_xyz(0.0, 0.0, 100.0)
+        Transform::from_xyz(0.0, 0.0, 0.0)
         Mesh2d(asset_value(ship_shape))
         MeshMaterial2d<ColorMaterial>(asset_value(Color::srgb(0.0, 0.5, 1.0)))
 
@@ -141,6 +141,13 @@ fn player() -> impl Scene {
             ships::TurningEngine {
                 turn_torque: 1000000000.0,
                 power_draw: 50.0
+            }
+            --
+            Name("Plasma Cannon")
+            ships::ProjectileWeapon {
+                velocity: 500.0,
+                frequency: 4.0,
+                power_draw: 100.0,
             }
         ]
     }

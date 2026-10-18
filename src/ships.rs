@@ -3,9 +3,11 @@ use bevy::prelude::*;
 mod controller;
 mod engines;
 mod power_system;
+mod weapons;
 
 pub use engines::{ForwardEngine, ReverseEngine, TurningEngine};
-pub use power_system::{PowerConsumer, PowerSource, PowerStorage};
+pub use power_system::{PowerSource, PowerStorage};
+pub use weapons::ProjectileWeapon;
 
 pub struct ShipsPlugin;
 
@@ -22,12 +24,14 @@ impl Plugin for ShipsPlugin {
                     engines::request_engine_power::<ForwardEngine>,
                     engines::request_engine_power::<ReverseEngine>,
                     engines::request_engine_power::<TurningEngine>,
+                    weapons::request_weapon_power,
                 ),
                 power_system::allocate_ship_power,
                 (
-                    engines::fire_engine::<ForwardEngine>,
-                    engines::fire_engine::<ReverseEngine>,
-                    engines::fire_engine::<TurningEngine>,
+                    engines::fire_engines::<ForwardEngine>,
+                    engines::fire_engines::<ReverseEngine>,
+                    engines::fire_engines::<TurningEngine>,
+                    weapons::fire_weapons,
                 ),
             )
                 .chain(),

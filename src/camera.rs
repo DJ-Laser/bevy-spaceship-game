@@ -1,3 +1,4 @@
+use avian2d::dynamics::rigid_body::mass_properties::components::ComputedCenterOfMass;
 use bevy::{
     prelude::*,
     render::render_resource::AsBindGroup,
@@ -29,6 +30,7 @@ impl MainCamera {
         bsn! {
             #MainCamera
             Children [
+                Transform::from_xyz(0.0, 0.0, -100.0)
                 Mesh2d(asset_value(Rectangle::default()))
                 MeshMaterial2d<StarfieldMaterial>(asset_value(StarfieldMaterial::default()))
             ]
@@ -38,15 +40,21 @@ impl MainCamera {
 
 fn update_camera(
     mut cameras: Query<(&MainCamera, &mut Transform)>,
-    entities: Query<&GlobalTransform, Without<MainCamera>>,
+    entities: Query<(&GlobalTransform, Option<&ComputedCenterOfMass>), Without<MainCamera>>,
 ) {
     cameras.iter_mut().for_each(|(camera, mut transform)| {
-        let Ok(target) = entities.get(camera.follow) else {
+        let Ok((target_transform, center_of_mass)) = entities.get(camera.follow) else {
             return;
         };
 
-        transform.translation.x = target.translation().x;
-        transform.translation.y = target.translation().y;
+        let mut center = target_transform.translation().truncate();
+
+        if let Some(center_of_mass) = center_of_mass {
+            center -= center_of_mass.0;
+        }
+
+        transform.translation.x = center.x;
+        transform.translation.y = center.y;
     });
 }
 
