@@ -5,31 +5,46 @@ use crate::{
     camera::CameraPlugin,
     hud::{HudPlugin, player_hud},
     input::PlayerInputPlugin,
+    main_menu::MainMenuPlugin,
     ships::{DumbFireShipController, ShipHull, ShipsPlugin, Spaceship},
 };
 
 mod camera;
 mod hud;
 mod input;
+mod main_menu;
 mod ships;
 
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub enum GameState {
+    #[default]
+    MainMenu,
+    Game,
+}
+
 fn main() {
-    // bevy/avian init
+    // Bevy init
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins)
-        .add_plugins(
-            PhysicsPlugins::default()
-                .with_length_unit(100.0)
-                .set(PhysicsInterpolationPlugin::interpolate_all()),
-        )
-        .insert_resource(Gravity(Vec2::ZERO));
+    app.add_plugins(DefaultPlugins);
+
+    // Physics Setup
+    app.add_plugins(
+        PhysicsPlugins::default()
+            .with_length_unit(100.0)
+            .set(PhysicsInterpolationPlugin::interpolate_all()),
+    )
+    .insert_resource(Gravity(Vec2::ZERO));
 
     // Project plugins and systems
-    app.add_plugins(CameraPlugin)
-        .add_plugins(ShipsPlugin)
-        .add_plugins(PlayerInputPlugin)
-        .add_plugins(HudPlugin)
-        .add_systems(Startup, scene.spawn());
+    app.init_state::<GameState>()
+        .add_plugins((
+            MainMenuPlugin,
+            CameraPlugin,
+            ShipsPlugin,
+            PlayerInputPlugin,
+            HudPlugin,
+        ))
+        .add_systems(OnEnter(GameState::Game), scene.spawn());
 
     app.run();
 }
@@ -64,7 +79,7 @@ fn scene() -> impl SceneList {
         {asteriods}
         --
         @camera::MainCamera {
-            follow: #PlayerShip
+            follow: Option::Some(#PlayerShip)
         }
         --
         @player_hud(#PlayerShip)

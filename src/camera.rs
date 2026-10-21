@@ -22,7 +22,8 @@ impl Plugin for CameraPlugin {
 #[derive(SceneComponent, FromTemplate, Debug, Clone)]
 #[require(Camera2d)]
 pub struct MainCamera {
-    pub follow: Entity,
+    #[template(built_in)]
+    pub follow: Option<Entity>,
 }
 
 impl MainCamera {
@@ -43,7 +44,11 @@ fn update_camera(
     entities: Query<(&GlobalTransform, Option<&ComputedCenterOfMass>), Without<MainCamera>>,
 ) {
     cameras.iter_mut().for_each(|(camera, mut transform)| {
-        let Ok((target_transform, center_of_mass)) = entities.get(camera.follow) else {
+        let Some(follow_target) = camera.follow else {
+            return;
+        };
+
+        let Ok((target_transform, center_of_mass)) = entities.get(follow_target) else {
             return;
         };
 
