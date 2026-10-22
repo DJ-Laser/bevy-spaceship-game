@@ -6,7 +6,7 @@ use bevy::{
     picking::hover::Hovered,
     prelude::*,
     ui::Pressed,
-    ui_widgets::{ActivateOnPress, Button},
+    ui_widgets::{Activate, ActivateOnPress, Button},
 };
 
 use crate::GameState;
@@ -32,8 +32,9 @@ impl Plugin for MainMenuPlugin {
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
 enum MenuState {
-    #[default]
     Main,
+    #[default]
+    Disabled,
 }
 
 fn background() -> impl SceneList {
@@ -44,6 +45,7 @@ fn background() -> impl SceneList {
     );
 
     bsn_list! {
+      DespawnOnExit<GameState>(GameState::MainMenu)
       @crate::camera::MainCamera
       Transform::from_translation(camera_pos)
     }
@@ -127,8 +129,15 @@ fn main_menu() -> impl Scene {
           }
           --
           @menu_button("textures/icons/right.png", "Play")
+          on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>, mut menu_state: ResMut<NextState<MenuState>>| {
+            game_state.set(GameState::Game);
+            menu_state.set(MenuState::Disabled);
+          })
           --
           @menu_button("textures/icons/exitRight.png", "Quit")
+          on(|_: On<Activate>, mut exit: MessageWriter<AppExit>| {
+            exit.write(AppExit::Success);
+          })
         ]
       ]
     }
