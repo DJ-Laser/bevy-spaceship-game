@@ -1,10 +1,13 @@
+use std::path::{Path, PathBuf};
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use leafwing_input_manager::input_map::InputMap;
 
 use crate::{
     camera::CameraPlugin,
     hud::{HudPlugin, player_hud},
-    input::PlayerInputPlugin,
+    input::{PlayerAction, PlayerInputPlugin},
     main_menu::MainMenuPlugin,
     ships::{DumbFireShipController, ShipHull, ShipsPlugin, Spaceship},
 };
@@ -14,6 +17,18 @@ mod hud;
 mod input;
 mod main_menu;
 mod ships;
+
+fn config_file(file: impl AsRef<Path>) -> PathBuf {
+    const GAME_NAME: &str = "untitled-space-game";
+
+    #[cfg(not(target_family = "wasm"))]
+    let config_dir = dirs::config_dir().unwrap().join(GAME_NAME);
+
+    #[cfg(target_family = "wasm")]
+    let config_dir = Path::new("local").join("configuration");
+
+    config_dir.join(file)
+}
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum GameState {
@@ -90,7 +105,6 @@ fn asteroid(radius: f32, hp: f32) -> impl Scene {
     let shape = Circle::new(radius);
 
     bsn! {
-        input::default_player_input_map()
         ShipHull {
             max_hp: hp,
         }
@@ -114,7 +128,7 @@ fn player() -> impl Scene {
 
     bsn! {
         Spaceship
-        input::default_player_input_map()
+        InputMap<PlayerAction>
         ShipHull {
             max_hp: 1000.0,
         }
