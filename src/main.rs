@@ -6,13 +6,15 @@ use leafwing_input_manager::input_map::InputMap;
 
 use crate::{
     camera::CameraPlugin,
+    editor::ShipEditorPlugin,
     hud::{HudPlugin, player_hud},
-    input::{PlayerAction, PlayerInputPlugin},
+    input::{GameAction, PlayerInputPlugin},
     main_menu::MainMenuPlugin,
     ships::{DumbFireShipController, ShipHull, ShipsPlugin, Spaceship},
 };
 
 mod camera;
+mod editor;
 mod hud;
 mod input;
 mod main_menu;
@@ -35,12 +37,13 @@ pub enum GameState {
     #[default]
     MainMenu,
     Game,
+    ShipEditor,
 }
 
 fn main() {
     // Bevy init
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins);
+    app.add_plugins((DefaultPlugins, MeshPickingPlugin));
 
     // Physics Setup
     app.add_plugins(
@@ -55,6 +58,7 @@ fn main() {
         .add_plugins((
             MainMenuPlugin,
             CameraPlugin,
+            ShipEditorPlugin,
             ShipsPlugin,
             PlayerInputPlugin,
             HudPlugin,
@@ -77,6 +81,7 @@ fn scene() -> impl SceneList {
         );
 
         let scene = bsn! {
+            DespawnOnExit<GameState>(GameState::Game)
             @asteroid(radius, hp)
             Position(position)
         };
@@ -85,18 +90,22 @@ fn scene() -> impl SceneList {
     }
 
     bsn_list! {
+        DespawnOnExit<GameState>(GameState::Game)
         #PlayerShip
         @player()
         --
+        DespawnOnExit<GameState>(GameState::Game)
         #EnemyShip
         @enemy()
         --
         {asteriods}
         --
+        DespawnOnExit<GameState>(GameState::Game)
         @camera::MainCamera {
             follow: Option::Some(#PlayerShip)
         }
         --
+        DespawnOnExit<GameState>(GameState::Game)
         @player_hud(#PlayerShip)
     }
 }
@@ -128,7 +137,7 @@ fn player() -> impl Scene {
 
     bsn! {
         Spaceship
-        InputMap<PlayerAction>
+        InputMap<GameAction>
         ShipHull {
             max_hp: 1000.0,
         }

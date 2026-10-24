@@ -10,6 +10,8 @@ pub use engines::{ForwardEngine, ReverseEngine, TurningEngine};
 pub use power_system::{PowerSource, PowerStorage};
 pub use weapons::{ProjectileWeapon, ShipHull};
 
+use crate::GameState;
+
 pub struct ShipsPlugin;
 
 impl Plugin for ShipsPlugin {
@@ -18,10 +20,13 @@ impl Plugin for ShipsPlugin {
             FixedUpdate,
             (
                 (
-                    weapons::init_ship_hull,
                     power_system::clear_power_demands,
-                    controller::player::control_player_ship,
-                    controller::dumb_fire::control_ship,
+                    weapons::init_ship_hull,
+                    (
+                        controller::player::control_player_ship,
+                        controller::dumb_fire::control_ship,
+                    )
+                        .run_if(in_state(GameState::Game)),
                 ),
                 (
                     engines::request_engine_power::<ForwardEngine>,

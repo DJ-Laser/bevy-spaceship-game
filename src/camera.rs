@@ -31,6 +31,7 @@ impl MainCamera {
         bsn! {
             #MainCamera
             Children [
+                #Starfield
                 Transform::from_xyz(0.0, 0.0, -100.0)
                 Mesh2d(asset_value(Rectangle::default()))
                 MeshMaterial2d<StarfieldMaterial>(asset_value(StarfieldMaterial::default()))

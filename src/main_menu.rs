@@ -25,6 +25,11 @@ impl Plugin for MainMenuPlugin {
             ),
         );
 
+        app.add_systems(
+            OnExit(GameState::MainMenu),
+            (|mut menu_state: ResMut<NextState<MenuState>>| menu_state.set(MenuState::Disabled),),
+        );
+
         app.add_systems(OnEnter(MenuState::Main), main_menu.spawn());
         app.add_systems(Update, (button_style).run_if(in_state(GameState::MainMenu)));
     }
@@ -129,9 +134,13 @@ fn main_menu() -> impl Scene {
           }
           --
           @menu_button("textures/icons/right.png", "Play")
-          on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>, mut menu_state: ResMut<NextState<MenuState>>| {
+          on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>| {
             game_state.set(GameState::Game);
-            menu_state.set(MenuState::Disabled);
+          })
+          --
+          @menu_button("textures/icons/right.png", "Ship Editor")
+          on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>| {
+            game_state.set(GameState::ShipEditor);
           })
           --
           @menu_button("textures/icons/exitRight.png", "Quit")

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use leafwing_input_manager::action_state::ActionState;
 
 use crate::{
-    input::PlayerAction,
+    input::GameAction,
     ships::{
         ForwardEngine, InactiveSystem, ReverseEngine, Spaceship, TurningEngine,
         controller::EngineTotals,
@@ -17,7 +17,7 @@ pub fn control_player_ship(
     ships: Query<
         (
             &Children,
-            &ActionState<PlayerAction>,
+            &ActionState<GameAction>,
             Forces,
             &ComputedAngularInertia,
         ),
@@ -37,7 +37,7 @@ pub fn control_player_ship(
 
             let goal_angular_velocity = 0.1
                 * (engine_totals.turn_torque * angular_inertia.inverse())
-                * player_actions.clamped_value(&PlayerAction::Turn);
+                * player_actions.clamped_value(&GameAction::Turn);
 
             let torque_needed = angular_inertia.value()
                 * (-goal_angular_velocity - forces.angular_velocity())
@@ -47,7 +47,7 @@ pub fn control_player_ship(
             while let Some(mut engine_actions) = iter.fetch_next() {
                 engine_actions.set_value(
                     &EngineAction::Thrust,
-                    player_actions.value(&PlayerAction::Thrust),
+                    player_actions.value(&GameAction::Thrust),
                 );
 
                 engine_actions.set_value(
@@ -60,7 +60,7 @@ pub fn control_player_ship(
             while let Some(mut weapon_actions) = iter.fetch_next() {
                 weapon_actions.set_button_value(
                     &WeaponAction::Fire,
-                    player_actions.button_value(&PlayerAction::FirePrimary),
+                    player_actions.button_value(&GameAction::FirePrimary),
                 );
             }
         });
