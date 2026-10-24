@@ -14,7 +14,10 @@ pub struct PlayerInputPlugin;
 
 impl Plugin for PlayerInputPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(InputManagerPlugin::<GameAction>::default());
+        app.add_plugins((
+            InputManagerPlugin::<GameAction>::default(),
+            InputManagerPlugin::<EditorAction>::default(),
+        ));
 
         app.insert_resource(
             Persistent::<Keybinds>::builder()
@@ -152,9 +155,9 @@ fn init_game_keybinds(
 
 fn init_editor_keybinds(
     keybinds: Res<Persistent<Keybinds>>,
-    mut player_input_maps: Query<&mut InputMap<EditorAction>, Added<InputMap<EditorAction>>>,
+    mut editor_input_maps: Query<&mut InputMap<EditorAction>, Added<InputMap<EditorAction>>>,
 ) {
-    player_input_maps.iter_mut().for_each(|mut map| {
+    editor_input_maps.iter_mut().for_each(|mut map| {
         *map = keybinds.editor.clone();
     });
 }

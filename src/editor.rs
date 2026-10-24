@@ -1,13 +1,10 @@
 use bevy::{
-    color::palettes::{
-        css::{BLUE, GRAY, GREEN, PINK, RED},
-        tailwind::{CYAN_500, PINK_100, RED_500},
-    },
-    picking::pointer::PointerInteraction,
+    color::palettes::css::{GRAY, GREEN},
     prelude::*,
 };
+use leafwing_input_manager::{action_state::ActionState, input_map::InputMap};
 
-use crate::{GameState, player};
+use crate::{GameState, input::EditorAction, player};
 
 pub struct ShipEditorPlugin;
 
@@ -17,7 +14,7 @@ impl Plugin for ShipEditorPlugin {
 
         app.add_systems(
             Update,
-            (draw_mesh_intersections).run_if(in_state(GameState::ShipEditor)),
+            (update_hover, place_part).run_if(in_state(GameState::ShipEditor)),
         );
     }
 }
@@ -25,6 +22,7 @@ impl Plugin for ShipEditorPlugin {
 #[derive(Component, Clone, FromTemplate)]
 struct EditorPreview {
     target: Entity,
+    cursor_position: Option<Vec2>,
 }
 
 fn editor_scene() -> impl SceneList {
@@ -35,82 +33,53 @@ fn editor_scene() -> impl SceneList {
         #Player
         DespawnOnExit<GameState>(GameState::ShipEditor)
         @player()
-        on(|event: On<PointerMove>, mut gizmos: Gizmos,| {
-            let Some(hit_pos) = event.hit.position else {
-            return;
-        };
-
-            gizmos.circle_2d(hit_pos.truncate(), 10.0, BLUE);
-        })
-
-        on(|event: On<PointerOver>, mut materials: Query<&mut MeshMaterial2d<ColorMaterial>>, mut colors: ResMut<Assets<ColorMaterial>>| {
-            println!("PointerOver");
-            let Ok(mut material) = materials.get_mut(event.entity) else {
-                return;
-            };
-
-            material.0 = colors.add(Into::<Color>::into(BLUE));
-        })
-
-        on(|event: On<PointerOut>, mut materials: Query<&mut MeshMaterial2d<ColorMaterial>>, mut colors: ResMut<Assets<ColorMaterial>>| {
-            println!("PointerOut");
-            let Ok(mut material) = materials.get_mut(event.entity) else {
-                return;
-            };
-
-            material.0 = colors.add(Into::<Color>::into(CYAN_500));
-        })
-
         --
         DespawnOnExit<GameState>(GameState::ShipEditor)
         Mesh2d(asset_value(Rectangle::new(50.0, 50.0)))
         MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(GREEN)))
+        Pickable::IGNORE
+        InputMap<EditorAction>
         EditorPreview {
             target: #Player
         }
     }
 }
 
-fn place_part(mut commands: Commands, ship: Single<Entity>) {
-    commands.spawn_scene(bsn! {
-        ChildOf({*ship})
-        Mesh2d(asset_value(Rectangle::new(50.0, 50.0)))
-        MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(GRAY)))
+fn place_part(
+    mut commands: Commands,
+    previews: Query<(&ActionState<EditorAction>, &EditorPreview)>,
+) {
+    previews.iter().for_each(|(actions, preview)| {
+        let Some(cursor_position) = preview.cursor_position else {
+            return;
+        };
+
+        if !actions.just_pressed(&EditorAction::Place) {
+            return;
+        }
+
+        commands.spawn_scene(bsn! {
+            Transform::from_translation(cursor_position.extend(0.0))
+            ChildOf({preview.target})
+            Mesh2d(asset_value(Rectangle::new(50.0, 50.0)))
+            MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(GRAY)))
+        });
     });
 }
 
 fn update_hover(
     mut move_events: MessageReader<PointerMove>,
-    mut preview: Single<&mut Transform, With<EditorPreview>>,
-    mut gizmos: Gizmos,
+    preview: Single<(&mut Transform, &mut EditorPreview)>,
 ) {
+    let (mut transform, mut preview) = preview.into_inner();
+
     move_events.read().for_each(|event| {
         let Some(hit_pos) = event.hit.position else {
             return;
         };
 
-        preview.translation.x = hit_pos.x;
-        preview.translation.y = hit_pos.y;
-
-        //gizmos.circle_2d(hit_pos.truncate(), 10.0, RED);
+        transform.translation.x = hit_pos.x;
+        transform.translation.y = hit_pos.y;
+        preview.cursor_position = Some(hit_pos.truncate())
     });
-}
-
-/// A system that draws hit indicators for every pointer.
-fn draw_mesh_intersections(
-    pointers: Query<&PointerInteraction>,
-    mut gizmos: Gizmos,
-    names: Query<&Name>,
-) {
-    for (entity, point) in pointers
-        .iter()
-        .filter_map(|interaction| interaction.get_nearest_hit())
-        .filter_map(|(entity, hit)| Some(entity).zip(hit.position))
-    {
-        gizmos.circle_2d(point.truncate(), 10.0, RED_500);
-        let name = names.get(*entity).ok().map(|name| name.as_str());
-        println!("Hit Entity: {:?}, Position: {:?}", name, point);
-    }
-
-    gizmos.circle_2d(Vec2::default(), 10.0, PINK);
 }
