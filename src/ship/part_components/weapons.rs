@@ -2,7 +2,10 @@ use avian2d::prelude::*;
 use bevy::{ecs::relationship::Relationship as _, prelude::*};
 use leafwing_input_manager::{Actionlike, action_state::ActionState};
 
-use crate::ships::{InactiveSystem, Spaceship, power_system::PowerConsumer};
+use crate::ship::{
+    Spaceship,
+    part_components::{InactivePart, power::PowerConsumer},
+};
 
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect)]
 pub enum WeaponAction {
@@ -21,7 +24,7 @@ pub struct ProjectileWeapon {
 }
 
 pub fn request_weapon_power(
-    mut weapons: Query<(&ProjectileWeapon, &mut PowerConsumer), Without<InactiveSystem>>,
+    mut weapons: Query<(&ProjectileWeapon, &mut PowerConsumer), Without<InactivePart>>,
 ) {
     weapons.iter_mut().for_each(|(weapon, mut consumer)| {
         if weapon.fire_cooldown > 0.0 {
@@ -41,7 +44,7 @@ pub fn fire_weapons(
             &ActionState<WeaponAction>,
             &mut PowerConsumer,
         ),
-        Without<InactiveSystem>,
+        Without<InactivePart>,
     >,
 ) {
     weapons

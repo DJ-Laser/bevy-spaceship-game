@@ -1,7 +1,10 @@
 use avian2d::prelude::*;
 use bevy::{ecs::template::EntityTemplate, prelude::*};
 
-use crate::ships::{InactiveSystem, PowerStorage, ShipHull, Spaceship};
+use crate::ship::{
+    Spaceship,
+    part_components::{InactivePart, PowerStorage, ShipHull},
+};
 
 pub struct HudPlugin;
 
@@ -48,7 +51,7 @@ struct HullDurabilityHud(Entity);
 fn energy_hud_text(
     hud: Single<(&EnergyHud, &mut Text)>,
     spaceships: Query<&Children, With<Spaceship>>,
-    energy_storages: Query<&PowerStorage, Without<InactiveSystem>>,
+    energy_storages: Query<&PowerStorage, Without<InactivePart>>,
 ) {
     let (ship_id, mut text) = hud.into_inner();
     let mut total_capacity = 0.0;
@@ -72,7 +75,7 @@ fn energy_hud_text(
 
 fn velocity_hud_text(
     hud: Single<(&VelocityHud, &mut Text)>,
-    ships: Query<(Entity, &LinearVelocity, &AngularVelocity), Without<InactiveSystem>>,
+    ships: Query<(Entity, &LinearVelocity, &AngularVelocity), Without<InactivePart>>,
 ) {
     let (ship_id, mut text) = hud.into_inner();
 
@@ -88,7 +91,7 @@ fn velocity_hud_text(
 fn hull_durability_hud_text(
     hud: Single<(&HullDurabilityHud, &mut Text)>,
     spaceships: Query<(&Children, Option<&ShipHull>), With<Spaceship>>,
-    hulls: Query<&ShipHull, Without<InactiveSystem>>,
+    hulls: Query<&ShipHull, Without<InactivePart>>,
 ) {
     let (ship_id, mut text) = hud.into_inner();
     let mut total_max_hp = 0.0;

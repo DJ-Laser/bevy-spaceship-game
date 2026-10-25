@@ -2,7 +2,7 @@ use avian2d::{dynamics::rigid_body::forces::ForcesItem, prelude::*};
 use bevy::{ecs::relationship::Relationship as _, prelude::*};
 use leafwing_input_manager::{Actionlike, action_state::ActionState};
 
-use crate::ships::{InactiveSystem, power_system::PowerConsumer};
+use crate::ship::part_components::{InactivePart, power::PowerConsumer};
 
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect)]
 #[actionlike(Axis)]
@@ -18,10 +18,7 @@ pub trait EngineComponent: Component {
 }
 
 pub fn request_engine_power<C: EngineComponent>(
-    mut engines: Query<
-        (&C, &ActionState<EngineAction>, &mut PowerConsumer),
-        Without<InactiveSystem>,
-    >,
+    mut engines: Query<(&C, &ActionState<EngineAction>, &mut PowerConsumer), Without<InactivePart>>,
 ) {
     engines
         .iter_mut()
@@ -36,7 +33,7 @@ pub fn fire_engines<C: EngineComponent>(
     mut spaceships: Query<Forces>,
     engines: Query<
         (&ChildOf, &C, &ActionState<EngineAction>, &PowerConsumer),
-        Without<InactiveSystem>,
+        Without<InactivePart>,
     >,
 ) {
     engines

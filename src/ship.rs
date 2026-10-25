@@ -1,29 +1,25 @@
 use bevy::prelude::*;
 
-mod controller;
-mod engines;
-mod power_system;
-mod weapons;
-
-pub use controller::dumb_fire::DumbFireShipController;
-pub use engines::{ForwardEngine, ReverseEngine, TurningEngine};
-pub use power_system::{PowerSource, PowerStorage};
-pub use weapons::{ProjectileWeapon, ShipHull};
-
 use crate::GameState;
 
-pub struct ShipsPlugin;
+pub mod controller;
+pub mod part_components;
+pub mod parts;
 
-impl Plugin for ShipsPlugin {
+pub struct ShipPlugin;
+
+impl Plugin for ShipPlugin {
     fn build(&self, app: &mut App) {
+        use part_components::*;
+
         app.add_systems(
             FixedUpdate,
             (
                 (
-                    power_system::clear_power_demands,
+                    power::clear_power_demands,
                     weapons::init_ship_hull,
                     (
-                        controller::player::control_player_ship,
+                        controller::player::control_ship,
                         controller::dumb_fire::control_ship,
                     )
                         .run_if(in_state(GameState::Game)),
@@ -34,7 +30,7 @@ impl Plugin for ShipsPlugin {
                     engines::request_engine_power::<TurningEngine>,
                     weapons::request_weapon_power,
                 ),
-                power_system::allocate_ship_power,
+                power::allocate_ship_power,
                 (
                     engines::fire_engines::<ForwardEngine>,
                     engines::fire_engines::<ReverseEngine>,
@@ -51,7 +47,3 @@ impl Plugin for ShipsPlugin {
 /// A marker component that enables the spaceship update cycle for this entity.
 #[derive(Component, Debug, Default, Clone)]
 pub struct Spaceship;
-
-/// A marker component indicating that this subsystem is inactive and should not participate in the ship's update cycle.
-#[derive(Component, Debug, Default, Clone)]
-pub struct InactiveSystem;

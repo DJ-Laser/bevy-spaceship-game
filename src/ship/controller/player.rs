@@ -4,15 +4,19 @@ use leafwing_input_manager::action_state::ActionState;
 
 use crate::{
     input::GameAction,
-    ships::{
-        ForwardEngine, InactiveSystem, ReverseEngine, Spaceship, TurningEngine,
+    ship::part_components::{ProjectileWeapon, engines::EngineAction, weapons::WeaponAction},
+    ship::{
+        Spaceship,
         controller::EngineTotals,
-        engines::EngineAction,
-        weapons::{ProjectileWeapon, WeaponAction},
+        part_components::{ForwardEngine, InactivePart, ReverseEngine, TurningEngine},
     },
 };
 
-pub fn control_player_ship(
+#[derive(Component, Default, Clone)]
+#[require(ActionState<GameAction>)]
+pub struct PlayerShipController;
+
+pub fn control_ship(
     time: Res<Time>,
     ships: Query<
         (
@@ -21,12 +25,9 @@ pub fn control_player_ship(
             Forces,
             &ComputedAngularInertia,
         ),
-        With<Spaceship>,
+        (With<Spaceship>, With<PlayerShipController>),
     >,
-    engines: Query<
-        AnyOf<(&ForwardEngine, &ReverseEngine, &TurningEngine)>,
-        Without<InactiveSystem>,
-    >,
+    engines: Query<AnyOf<(&ForwardEngine, &ReverseEngine, &TurningEngine)>, Without<InactivePart>>,
     mut engine_actions: Query<&mut ActionState<EngineAction>>,
     mut primary_weapon_actions: Query<&mut ActionState<WeaponAction>, With<ProjectileWeapon>>,
 ) {

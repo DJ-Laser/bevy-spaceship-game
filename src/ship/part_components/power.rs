@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
-use crate::ships::{InactiveSystem, Spaceship};
+use crate::ship::{Spaceship, part_components::InactivePart};
 
 #[derive(Component, Debug, Default, Clone)]
 pub struct PowerSource {
-    /// The maximum amount of power this system can produce.
+    /// The maximum amount of power this part can produce.
     pub generation_capacity: f32,
 }
 
@@ -18,9 +18,9 @@ impl PowerSource {
 
 #[derive(Component, Debug, Default, Clone)]
 pub struct PowerStorage {
-    /// The total amount of energy (power * seconds) this system can store.
+    /// The total amount of energy (power * seconds) this part can store.
     pub storage_capacity: f32,
-    /// The ammount of energy (power * seconds) that is currently stoted in this system.
+    /// The ammount of energy (power * seconds) that is currently stoted in this part.
     pub stored_energy: f32,
 }
 
@@ -40,13 +40,13 @@ pub struct PowerConsumer {
 }
 
 impl PowerConsumer {
-    /// Resets the power demands for this system
+    /// Resets the power demands for this part
     fn clear(&mut self) {
         self.total_requested_power = 0.0;
         self.allocated_power = 0.0;
     }
 
-    /// Request power for a component of a system
+    /// Request power for a component of a part
     pub fn request_power(&mut self, requested_power: f32) {
         self.total_requested_power += requested_power;
     }
@@ -61,7 +61,7 @@ impl PowerConsumer {
     }
 }
 
-pub fn clear_power_demands(mut consumers: Query<&mut PowerConsumer, Without<InactiveSystem>>) {
+pub fn clear_power_demands(mut consumers: Query<&mut PowerConsumer, Without<InactivePart>>) {
     consumers.iter_mut().for_each(|mut consumer| {
         consumer.clear();
     });
@@ -70,9 +70,9 @@ pub fn clear_power_demands(mut consumers: Query<&mut PowerConsumer, Without<Inac
 pub fn allocate_ship_power(
     time: Res<Time>,
     spaceships: Query<&Children, With<Spaceship>>,
-    sources: Query<&PowerSource, Without<InactiveSystem>>,
-    mut storages: Query<&mut PowerStorage, Without<InactiveSystem>>,
-    mut consumers: Query<&mut PowerConsumer, Without<InactiveSystem>>,
+    sources: Query<&PowerSource, Without<InactivePart>>,
+    mut storages: Query<&mut PowerStorage, Without<InactivePart>>,
+    mut consumers: Query<&mut PowerConsumer, Without<InactivePart>>,
 ) {
     spaceships.iter().for_each(|children| {
         let total_generation: f32 = sources
@@ -87,7 +87,7 @@ pub fn allocate_ship_power(
             .map(|consumer| consumer.total_requested_power)
             .sum();
 
-        // Energy (power per second) surplus/deficit to be absorbed by the power storage systems
+        // Energy (power per second) surplus/deficit to be absorbed by the power storage parts
         let mut energy_delta = (total_generation - total_requested_consumption) * time.delta_secs();
 
         let mut iter = storages.iter_many_mut(children).matched();
@@ -113,7 +113,7 @@ pub fn allocate_ship_power(
             (total_generation + energy_delta) / total_requested_consumption
         };
 
-        //TODO: Properly allocate reserve power to priority systems
+        //TODO: Properly allocate reserve power to priority parts
         let mut iter = consumers.iter_many_mut(children).matched();
         while let Some(mut consumer) = iter.fetch_next() {
             consumer.allocated_power = consumer.total_requested_power * allocated_fraction;

@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use leafwing_input_manager::action_state::ActionState;
 
-use crate::ships::{ProjectileWeapon, Spaceship, weapons::WeaponAction};
+use crate::{
+    ship::Spaceship,
+    ship::part_components::{ProjectileWeapon, weapons::WeaponAction},
+};
 
 #[derive(Component, Default, Clone)]
 pub struct DumbFireShipController;

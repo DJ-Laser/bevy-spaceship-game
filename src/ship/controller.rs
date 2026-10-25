@@ -1,9 +1,12 @@
 use bevy::{ecs::entity::EntityEquivalent, prelude::*};
 
-use crate::ships::{ForwardEngine, InactiveSystem, ReverseEngine, TurningEngine};
+use crate::ship::part_components::{ForwardEngine, InactivePart, ReverseEngine, TurningEngine};
 
-pub mod dumb_fire;
-pub mod player;
+pub(super) mod dumb_fire;
+pub(super) mod player;
+
+pub use dumb_fire::DumbFireShipController;
+pub use player::PlayerShipController;
 
 struct EngineTotals {
     forward_thrust: f32,
@@ -16,7 +19,7 @@ impl EngineTotals {
         children: EntityList,
         engines: Query<
             AnyOf<(&ForwardEngine, &ReverseEngine, &TurningEngine)>,
-            Without<InactiveSystem>,
+            Without<InactivePart>,
         >,
     ) -> Self {
         let mut totals = Self {

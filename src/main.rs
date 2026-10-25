@@ -10,7 +10,11 @@ use crate::{
     hud::{HudPlugin, player_hud},
     input::{GameAction, PlayerInputPlugin},
     main_menu::MainMenuPlugin,
-    ships::{DumbFireShipController, ShipHull, ShipsPlugin, Spaceship},
+    ship::{
+        ShipPlugin, Spaceship,
+        controller::{DumbFireShipController, PlayerShipController},
+        part_components::ShipHull,
+    },
 };
 
 mod camera;
@@ -18,7 +22,7 @@ mod editor;
 mod hud;
 mod input;
 mod main_menu;
-mod ships;
+mod ship;
 
 fn config_file(file: impl AsRef<Path>) -> PathBuf {
     const GAME_NAME: &str = "untitled-space-game";
@@ -59,7 +63,7 @@ fn main() {
             MainMenuPlugin,
             CameraPlugin,
             ShipEditorPlugin,
-            ShipsPlugin,
+            ShipPlugin,
             PlayerInputPlugin,
             HudPlugin,
         ))
@@ -135,9 +139,12 @@ fn player() -> impl Scene {
         Vec2 { x: 50.0, y: -50.0 },
     );
 
+    use ship::parts::*;
+
     bsn! {
         Spaceship
         InputMap<GameAction>
+        PlayerShipController
         ShipHull {
             max_hp: 1000.0,
         }
@@ -150,36 +157,17 @@ fn player() -> impl Scene {
         Collider::from(ship_shape)
 
         Children [
-            Name("Reactor MK5")
-            ships::PowerSource::new(600.0)
+            @reactor_mk5()
             --
-            Name("Battery 100H4")
-            ships::PowerStorage::new(1000.0)
+            @battery_100h4()
             --
-            Name("Engine XN-2000")
-            ships::ForwardEngine {
-                forward_thrust: 500000.0,
-                power_draw: 700.0
-            }
+            @engine_xn_2000()
             --
-            Name("Engine RH-500")
-            ships::ReverseEngine {
-                reverse_thrust: 100000.0,
-                power_draw: 200.0
-            }
+            @engine_rh_500()
             --
-            Name("Rcs RF-150")
-            ships::TurningEngine {
-                turn_torque: 1000000000.0,
-                power_draw: 50.0
-            }
+            @rcs_tl_150()
             --
-            Name("Plasma Cannon")
-            ships::ProjectileWeapon {
-                velocity: 500.0,
-                frequency: 4.0,
-                power_draw: 100.0,
-            }
+            @plasma_cannon()
         ]
     }
 }
@@ -190,6 +178,8 @@ fn enemy() -> impl Scene {
         Vec2 { x: 0.0, y: 50.0 },
         Vec2 { x: 50.0, y: -50.0 },
     );
+
+    use ship::parts::*;
 
     bsn! {
         Spaceship
@@ -206,18 +196,11 @@ fn enemy() -> impl Scene {
         Collider::from(ship_shape)
 
         Children [
-            Name("Reactor MK5")
-            ships::PowerSource::new(600.0)
+            @reactor_mk5()
             --
-            Name("Battery 100H4")
-            ships::PowerStorage::new(1000.0)
+            @battery_100h4()
             --
-            Name("Plasma Cannon")
-            ships::ProjectileWeapon {
-                velocity: 500.0,
-                frequency: 4.0,
-                power_draw: 100.0,
-            }
+            @plasma_cannon()
         ]
     }
 }
