@@ -1,10 +1,12 @@
-use bevy::{
-    color::palettes::css::{GRAY, GREEN},
-    prelude::*,
-};
+use bevy::prelude::*;
 use leafwing_input_manager::{action_state::ActionState, input_map::InputMap};
 
-use crate::{GameState, input::EditorAction, player};
+use crate::{
+    GameState,
+    input::EditorAction,
+    player_ship,
+    ship::{controller::DumbFireShipController, part_components::InactivePart, parts},
+};
 
 pub struct ShipEditorPlugin;
 
@@ -14,72 +16,107 @@ impl Plugin for ShipEditorPlugin {
 
         app.add_systems(
             Update,
-            (update_hover, place_part).run_if(in_state(GameState::ShipEditor)),
+            (
+                (update_cursor, update_preview_transform).chain(),
+                place_part,
+            )
+                .run_if(in_state(GameState::ShipEditor)),
         );
     }
 }
 
 #[derive(Component, Clone, FromTemplate)]
-struct EditorPreview {
-    target: Entity,
+struct EditorManager {
+    shop_entity: Entity,
     cursor_position: Option<Vec2>,
+    #[template(built_in)]
+    preview_entity: Option<Entity>,
 }
+
+#[derive(Component, Clone, FromTemplate)]
+#[require(Visibility, InactivePart, Transform)]
+struct EditorPreview;
 
 fn editor_scene() -> impl SceneList {
     bsn_list! {
         DespawnOnExit<GameState>(GameState::ShipEditor)
         @crate::camera::MainCamera
         --
+        #Shop
+        Visibility::Hidden
+        Children [
+            {parts::lists::common_parts()}
+        ]
+        --
         #Player
         DespawnOnExit<GameState>(GameState::ShipEditor)
-        @player()
-        --
-        DespawnOnExit<GameState>(GameState::ShipEditor)
-        Mesh2d(asset_value(Rectangle::new(50.0, 50.0)))
-        MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(GREEN)))
-        Pickable::IGNORE
+        @player_ship()
+        DumbFireShipController
+
         InputMap<EditorAction>
-        EditorPreview {
-            target: #Player
+        EditorManager {
+            shop_entity: #Shop,
+            preview_entity: Option::Some(#Preview),
         }
+
+        Children [
+            #Preview
+            @parts::reactor_mk5()
+            EditorPreview
+        ]
+        --
     }
+}
+
+fn update_cursor(
+    mut move_events: MessageReader<PointerMove>,
+    mut editors: Query<(&mut EditorManager, &GlobalTransform)>,
+) {
+    let Some(hit_pos) = move_events.read().last().and_then(|e| e.hit.position) else {
+        return;
+    };
+
+    editors.iter_mut().for_each(|(mut editor, transform)| {
+        let relative_translation = transform.affine().inverse().transform_point3(hit_pos);
+
+        editor.cursor_position = Some(relative_translation.truncate());
+    });
+}
+
+fn update_preview_transform(
+    editors: Query<&EditorManager>,
+    mut previews: Query<(&mut Visibility, &mut Transform), With<EditorPreview>>,
+) {
+    editors.iter().for_each(|editor| {
+        if let Some(preview_id) = editor.preview_entity
+            && let Ok((mut visibility, mut transform)) = previews.get_mut(preview_id)
+        {
+            let Some(cursor) = editor.cursor_position else {
+                *visibility = Visibility::Hidden;
+                return;
+            };
+
+            *visibility = Visibility::Inherited;
+            transform.translation.x = cursor.x;
+            transform.translation.y = cursor.y;
+            println!("{:?}", editor.cursor_position);
+        }
+    });
 }
 
 fn place_part(
     mut commands: Commands,
-    previews: Query<(&ActionState<EditorAction>, &EditorPreview)>,
+    mut editors: Query<(Entity, &mut EditorManager, &ActionState<EditorAction>)>,
 ) {
-    previews.iter().for_each(|(actions, preview)| {
-        let Some(cursor_position) = preview.cursor_position else {
-            return;
+    editors.iter_mut().for_each(|(editor_id, editor, actions)| {
+        if let Some(preview_id) = editor.preview_entity
+            && actions.just_pressed(&EditorAction::Place)
+        {
+            commands.entity(editor_id).add_child(preview_id);
+
+            commands
+                .entity(preview_id)
+                .remove::<(EditorPreview, Visibility, InactivePart)>();
         };
-
-        if !actions.just_pressed(&EditorAction::Place) {
-            return;
-        }
-
-        commands.spawn_scene(bsn! {
-            Transform::from_translation(cursor_position.extend(0.0))
-            ChildOf({preview.target})
-            Mesh2d(asset_value(Rectangle::new(50.0, 50.0)))
-            MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(GRAY)))
-        });
-    });
-}
-
-fn update_hover(
-    mut move_events: MessageReader<PointerMove>,
-    preview: Single<(&mut Transform, &mut EditorPreview)>,
-) {
-    let (mut transform, mut preview) = preview.into_inner();
-
-    move_events.read().for_each(|event| {
-        let Some(hit_pos) = event.hit.position else {
-            return;
-        };
-
-        transform.translation.x = hit_pos.x;
-        transform.translation.y = hit_pos.y;
-        preview.cursor_position = Some(hit_pos.truncate())
     });
 }

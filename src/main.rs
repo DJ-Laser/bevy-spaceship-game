@@ -96,11 +96,14 @@ fn scene() -> impl SceneList {
     bsn_list! {
         DespawnOnExit<GameState>(GameState::Game)
         #PlayerShip
-        @player()
+        InputMap<GameAction>
+        PlayerShipController
+        @player_ship()
         --
         DespawnOnExit<GameState>(GameState::Game)
         #EnemyShip
-        @enemy()
+        DumbFireShipController
+        @enemy_ship()
         --
         {asteriods}
         --
@@ -132,7 +135,7 @@ fn asteroid(radius: f32, hp: f32) -> impl Scene {
     }
 }
 
-fn player() -> impl Scene {
+fn player_ship() -> impl Scene {
     let ship_shape = Triangle2d::new(
         Vec2 { x: -50.0, y: -50.0 },
         Vec2 { x: 0.0, y: 50.0 },
@@ -143,8 +146,6 @@ fn player() -> impl Scene {
 
     bsn! {
         Spaceship
-        InputMap<GameAction>
-        PlayerShipController
         ShipHull {
             max_hp: 1000.0,
         }
@@ -172,7 +173,7 @@ fn player() -> impl Scene {
     }
 }
 
-fn enemy() -> impl Scene {
+fn enemy_ship() -> impl Scene {
     let ship_shape = Triangle2d::new(
         Vec2 { x: -50.0, y: -50.0 },
         Vec2 { x: 0.0, y: 50.0 },
@@ -183,7 +184,6 @@ fn enemy() -> impl Scene {
 
     bsn! {
         Spaceship
-        DumbFireShipController
         ShipHull {
             max_hp: 1000.0,
         }
