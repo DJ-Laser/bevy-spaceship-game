@@ -2,19 +2,14 @@ use std::path::{Path, PathBuf};
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use leafwing_input_manager::input_map::InputMap;
 
 use crate::{
     camera::CameraPlugin,
     editor::ShipEditorPlugin,
     hud::{HudPlugin, player_hud},
-    input::{GameAction, PlayerInputPlugin},
+    input::PlayerInputPlugin,
     main_menu::MainMenuPlugin,
-    ship::{
-        ShipPlugin, Spaceship,
-        controller::{DumbFireShipController, PlayerShipController},
-        part_components::ShipHull,
-    },
+    ship::{ShipPlugin, Spaceship, controller::DumbFireShipController, part_components::ShipHull},
 };
 
 mod camera;
@@ -95,22 +90,11 @@ fn scene() -> impl SceneList {
 
     bsn_list! {
         DespawnOnExit<GameState>(GameState::Game)
-        #PlayerShip
-        InputMap<GameAction>
-        PlayerShipController
-        @player_ship()
-        --
-        DespawnOnExit<GameState>(GameState::Game)
         #EnemyShip
         DumbFireShipController
         @enemy_ship()
         --
         {asteriods}
-        --
-        DespawnOnExit<GameState>(GameState::Game)
-        @camera::MainCamera {
-            follow: Option::Some(#PlayerShip)
-        }
         --
         DespawnOnExit<GameState>(GameState::Game)
         @player_hud(#PlayerShip)
@@ -142,8 +126,6 @@ fn player_ship() -> impl Scene {
         Vec2 { x: 50.0, y: -50.0 },
     );
 
-    use ship::parts::*;
-
     bsn! {
         Spaceship
         ShipHull {
@@ -156,20 +138,6 @@ fn player_ship() -> impl Scene {
 
         RigidBody::Dynamic
         Collider::from(ship_shape)
-
-        Children [
-            @reactor_mk5()
-            --
-            @battery_100h4()
-            --
-            @engine_xn_2000()
-            --
-            @engine_rh_500()
-            --
-            @rcs_tl_150()
-            --
-            @plasma_cannon()
-        ]
     }
 }
 

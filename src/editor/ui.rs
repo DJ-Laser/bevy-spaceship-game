@@ -7,12 +7,14 @@ use bevy::{
 };
 
 use crate::{
+    GameState,
     editor::{EditorManager, EditorPreview, ShopCatalog},
     ship::parts::Cost,
 };
 
 #[derive(SceneComponent, FromTemplate, Clone)]
 #[scene(PartSelectionButtonProps)]
+#[require(Button, Hovered)]
 struct PartSelectionButton {
     editor: Entity,
     blueprint: Entity,
@@ -26,7 +28,6 @@ struct PartSelectionButtonProps {
 impl PartSelectionButton {
     fn scene(props: PartSelectionButtonProps) -> impl Scene {
         bsn! {
-          Button
           Node {
               width: Val::Px(180.0),
               height: Val::Px(32.0),
@@ -100,6 +101,7 @@ pub fn populate_shop_ui(
         .collect();
 
     commands.spawn_scene(bsn! {
+      DespawnOnExit<GameState>(GameState::ShipEditor)
       Node {
           position_type: PositionType::Absolute,
           left: Val::Px(12.0),

@@ -74,7 +74,7 @@ pub fn engine_xn_2000() -> impl Scene {
 
 pub fn engine_rh_500() -> impl Scene {
     bsn! {
-        Name("Engine RH-500")
+        Name("Reverse Engine RH-500")
         Cost(5_000)
         Mesh2d(asset_value(Rectangle::new(35.0, 25.0)))
         MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(RED)))
@@ -88,7 +88,7 @@ pub fn engine_rh_500() -> impl Scene {
 
 pub fn rcs_tl_150() -> impl Scene {
     bsn! {
-        Name("RCS TL-150")
+        Name("RCS Turning TL-150")
         Cost(10_000)
         Mesh2d(asset_value(Rectangle::new(25.0, 35.0)))
         MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(PURPLE)))

@@ -133,11 +133,11 @@ fn main_menu() -> impl Scene {
               margin: UiRect::all(px(50)),
           }
           --
-          @menu_button("textures/icons/right.png", "Play")
-          on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>| {
-            game_state.set(GameState::Game);
-          })
-          --
+          //@menu_button("textures/icons/right.png", "Play")
+          //on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>| {
+          //  game_state.set(GameState::Game);
+          //})
+          //--
           @menu_button("textures/icons/right.png", "Ship Editor")
           on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>| {
             game_state.set(GameState::ShipEditor);

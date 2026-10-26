@@ -1,12 +1,15 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    ui_widgets::{Activate, ActivateOnPress, Button},
+};
 use leafwing_input_manager::{action_state::ActionState, input_map::InputMap};
 
 use crate::{
     GameState,
-    input::EditorAction,
+    input::{EditorAction, GameAction},
     player_ship,
     ship::{
-        controller::DumbFireShipController,
+        controller::PlayerShipController,
         part_components::InactivePart,
         parts::{self, Cost},
     },
@@ -22,6 +25,8 @@ impl Plugin for ShipEditorPlugin {
             OnEnter(GameState::ShipEditor),
             (editor_scene.spawn(), ui::populate_shop_ui).chain(),
         );
+
+        app.add_systems(OnExit(GameState::ShipEditor), remove_editor_components);
 
         app.add_systems(
             Update,
@@ -48,30 +53,67 @@ struct EditorManager {
 struct EditorPreview;
 
 #[derive(Component, Clone, FromTemplate)]
-#[require(Visibility::Hidden, Transform, Pickable::IGNORE)]
+#[require(Visibility::Hidden, Transform, Pickable::IGNORE, DespawnOnExit::<GameState>(GameState::ShipEditor))]
 struct ShopCatalog;
 
 fn editor_scene() -> impl SceneList {
     bsn_list! {
-        DespawnOnExit<GameState>(GameState::ShipEditor)
-        @crate::camera::MainCamera
+        @crate::camera::MainCamera {
+            follow: Option::Some(#PlayerShip)
+        }
         --
+        DespawnOnExit<GameState>(GameState::ShipEditor)
         #Shop
         ShopCatalog
         Children [
             {parts::lists::common_parts()}
         ]
         --
-        #Player
-        DespawnOnExit<GameState>(GameState::ShipEditor)
+        #PlayerShip
         @player_ship()
-        DumbFireShipController
+        DespawnOnEnter<GameState>(GameState::MainMenu)
+        InputMap<GameAction>
+        PlayerShipController
 
         InputMap<EditorAction>
         EditorManager {
             shop_entity: #Shop,
             preview_entity: Option::Some(#Preview),
         }
+        --
+        DespawnOnExit<GameState>(GameState::ShipEditor)
+        Button
+        ActivateOnPress
+        Node {
+            width: px(300),
+            height: px(65),
+            margin: UiRect::all(px(20)),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            position_type: PositionType::Absolute,
+            right: px(0),
+            bottom: px(0),
+        }
+        BackgroundColor(Color::srgb(0.22, 0.22, 0.26))
+        Children [
+            ImageNode {
+            image: "textures/icons/right.png",
+            }
+            Node {
+                width: px(50),
+                position_type: PositionType::Absolute,
+                left: px(10),
+            }
+            --
+            Text::new("Play")
+            TextFont {
+            font_size: FontSize::Px(33.0),
+            }
+        ]
+
+        on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>| {
+            game_state.set(GameState::Game);
+          })
     }
 }
 
@@ -132,5 +174,11 @@ fn place_part(
                 .entity(preview_id)
                 .remove::<(EditorPreview, Visibility, InactivePart, Pickable)>();
         };
+    });
+}
+
+fn remove_editor_components(mut commands: Commands, editors: Query<Entity, With<EditorManager>>) {
+    editors.iter().for_each(|editor_id| {
+        commands.entity(editor_id).remove::<EditorManager>();
     });
 }
