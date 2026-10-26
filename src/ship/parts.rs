@@ -18,7 +18,7 @@ pub enum PartCategory {
 }
 
 #[derive(Component, Clone, Default)]
-pub struct Cost(i64);
+pub struct Cost(pub i64);
 
 pub fn reactor_mk5() -> impl Scene {
     //TODO: Add ways for parts to be "internal", that is, they need a part of the hull to live inside of

@@ -5,20 +5,30 @@ use crate::{
     GameState,
     input::EditorAction,
     player_ship,
-    ship::{controller::DumbFireShipController, part_components::InactivePart, parts},
+    ship::{
+        controller::DumbFireShipController,
+        part_components::InactivePart,
+        parts::{self, Cost},
+    },
 };
+
+mod ui;
 
 pub struct ShipEditorPlugin;
 
 impl Plugin for ShipEditorPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::ShipEditor), editor_scene.spawn());
+        app.add_systems(
+            OnEnter(GameState::ShipEditor),
+            (editor_scene.spawn(), ui::populate_shop_ui).chain(),
+        );
 
         app.add_systems(
             Update,
             (
                 (update_cursor, update_preview_transform).chain(),
                 place_part,
+                ui::update_buttons,
             )
                 .run_if(in_state(GameState::ShipEditor)),
         );
@@ -34,8 +44,12 @@ struct EditorManager {
 }
 
 #[derive(Component, Clone, FromTemplate)]
-#[require(Visibility, InactivePart, Transform)]
+#[require(Visibility::Hidden, InactivePart, Transform)]
 struct EditorPreview;
+
+#[derive(Component, Clone, FromTemplate)]
+#[require(Visibility::Hidden, Transform, Pickable::IGNORE)]
+struct ShopCatalog;
 
 fn editor_scene() -> impl SceneList {
     bsn_list! {
@@ -43,7 +57,7 @@ fn editor_scene() -> impl SceneList {
         @crate::camera::MainCamera
         --
         #Shop
-        Visibility::Hidden
+        ShopCatalog
         Children [
             {parts::lists::common_parts()}
         ]
@@ -58,13 +72,6 @@ fn editor_scene() -> impl SceneList {
             shop_entity: #Shop,
             preview_entity: Option::Some(#Preview),
         }
-
-        Children [
-            #Preview
-            @parts::reactor_mk5()
-            EditorPreview
-        ]
-        --
     }
 }
 
@@ -99,24 +106,31 @@ fn update_preview_transform(
             *visibility = Visibility::Inherited;
             transform.translation.x = cursor.x;
             transform.translation.y = cursor.y;
-            println!("{:?}", editor.cursor_position);
         }
     });
 }
 
 fn place_part(
     mut commands: Commands,
-    mut editors: Query<(Entity, &mut EditorManager, &ActionState<EditorAction>)>,
+    mut editors: Query<(&mut EditorManager, &ActionState<EditorAction>)>,
+    previews: Query<(&Name, &Cost), With<EditorPreview>>,
 ) {
-    editors.iter_mut().for_each(|(editor_id, editor, actions)| {
+    editors.iter_mut().for_each(|(mut editor, actions)| {
         if let Some(preview_id) = editor.preview_entity
             && actions.just_pressed(&EditorAction::Place)
         {
-            commands.entity(editor_id).add_child(preview_id);
+            let Ok((name, cost)) = previews.get(preview_id) else {
+                editor.preview_entity = None;
+                commands.entity(preview_id).despawn();
+                return;
+            };
 
+            println!("Adding {} for ${}", name, cost.0);
+
+            editor.preview_entity = None;
             commands
                 .entity(preview_id)
-                .remove::<(EditorPreview, Visibility, InactivePart)>();
+                .remove::<(EditorPreview, Visibility, InactivePart, Pickable)>();
         };
     });
 }
