@@ -1,3 +1,5 @@
+use std::f32::consts::FRAC_PI_2;
+
 use avian2d::prelude::*;
 use bevy::{ecs::relationship::Relationship as _, prelude::*};
 use leafwing_input_manager::{Actionlike, action_state::ActionState};
@@ -36,37 +38,40 @@ pub fn request_weapon_power(
 pub fn fire_weapons(
     time: Res<Time>,
     mut commands: Commands,
-    spaceships: Query<(&Position, &Rotation, &LinearVelocity), With<Spaceship>>,
+    spaceships: Query<&LinearVelocity, With<Spaceship>>,
     mut weapons: Query<
         (
             &ChildOf,
             &mut ProjectileWeapon,
             &ActionState<WeaponAction>,
             &mut PowerConsumer,
+            &GlobalTransform,
         ),
         Without<InactivePart>,
     >,
 ) {
     weapons
         .iter_mut()
-        .for_each(|(p, mut weapon, actions, consumer)| {
+        .for_each(|(p, mut weapon, actions, consumer, tramsform)| {
             if weapon.fire_cooldown > 0.0 {
                 weapon.fire_cooldown -= time.delta_secs() * consumer.allocated_fraction();
             }
 
             if weapon.fire_cooldown <= 0.0 && actions.pressed(&WeaponAction::Fire) {
-                let Ok((position, rotation, linear_velocity)) = spaceships.get(p.get()) else {
+                let Ok(linear_velocity) = spaceships.get(p.get()) else {
                     return;
                 };
 
-                let velocity = linear_velocity.0 + rotation * Vec2::Y * weapon.velocity;
+                let rotation = tramsform.rotation().to_euler(EulerRot::XYZ).2;
+                let velocity =
+                    linear_velocity.0 + Vec2::from_angle(rotation + FRAC_PI_2) * weapon.velocity;
 
                 weapon.fire_cooldown = 1.0 / weapon.frequency;
 
                 let circle = Circle::new(2.5);
                 commands
                     .queue_spawn_scene(bsn! {
-                        Position({position.0})
+                        Position({tramsform.translation().truncate()})
                         LinearVelocity(velocity)
                         RigidBody
                         Collider::from(circle)
