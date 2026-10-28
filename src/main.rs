@@ -1,3 +1,10 @@
+mod camera;
+mod editor;
+mod hud;
+mod input;
+mod main_menu;
+mod ship;
+
 use std::path::{Path, PathBuf};
 
 use avian2d::prelude::*;
@@ -11,13 +18,6 @@ use crate::{
     main_menu::MainMenuPlugin,
     ship::{ShipPlugin, Spaceship, controller::DumbFireShipController, part_components::ShipHull},
 };
-
-mod camera;
-mod editor;
-mod hud;
-mod input;
-mod main_menu;
-mod ship;
 
 fn config_file(file: impl AsRef<Path>) -> PathBuf {
     const GAME_NAME: &str = "untitled-space-game";

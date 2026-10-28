@@ -1,10 +1,10 @@
+pub mod lists;
+
 use crate::ship::part_components::*;
 use bevy::{
     color::palettes::css::{BLUE, GRAY, GREEN, PURPLE, RED, YELLOW},
     prelude::*,
 };
-
-pub mod lists;
 
 #[derive(Component, Default, Debug, Clone)]
 pub enum PartCategory {

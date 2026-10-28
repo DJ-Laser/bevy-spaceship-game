@@ -1,8 +1,8 @@
-use bevy::prelude::*;
-
 pub(super) mod engines;
 pub(super) mod power;
 pub(super) mod weapons;
+
+use bevy::prelude::*;
 
 pub use engines::{ForwardEngine, ReverseEngine, TurningEngine};
 pub use power::{PowerSource, PowerStorage};

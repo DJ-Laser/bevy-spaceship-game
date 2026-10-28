@@ -1,9 +1,9 @@
+pub(super) mod dumb_fire;
+pub(super) mod player;
+
 use bevy::{ecs::entity::EntityEquivalent, prelude::*};
 
 use crate::ship::part_components::{ForwardEngine, InactivePart, ReverseEngine, TurningEngine};
-
-pub(super) mod dumb_fire;
-pub(super) mod player;
 
 pub use dumb_fire::DumbFireShipController;
 pub use player::PlayerShipController;

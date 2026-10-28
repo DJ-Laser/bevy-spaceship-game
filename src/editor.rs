@@ -1,3 +1,5 @@
+mod ui;
+
 use bevy::{
     prelude::*,
     ui_widgets::{Activate, ActivateOnPress, Button},
@@ -14,8 +16,6 @@ use crate::{
         parts::{self, Cost},
     },
 };
-
-mod ui;
 
 pub struct ShipEditorPlugin;
 
