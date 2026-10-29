@@ -1,8 +1,11 @@
 pub mod lists;
 
-use crate::ship::part_components::*;
+use crate::{
+    editor::grid::{GridFootprint, TileType},
+    ship::part_components::*,
+};
 use bevy::{
-    color::palettes::css::{BLUE, GRAY, GREEN, PURPLE, RED, YELLOW},
+    color::palettes::css::{BEIGE, BLUE, GRAY, GREEN, PURPLE, RED, YELLOW},
     prelude::*,
 };
 
@@ -55,6 +58,17 @@ pub fn plasma_cannon() -> impl Scene {
             frequency: 4.0,
             power_draw: 100.0,
         }
+    }
+}
+
+pub fn hull_panel_3x3() -> impl Scene {
+    bsn! {
+        Name("Hull Panel 3x3")
+        Cost(2_500)
+        Mesh2d(asset_value(Rectangle::new(60.0, 60.0)))
+        MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(BEIGE)))
+        PartCategory::Defense
+        GridFootprint::builder().rect(TileType::Hull, ivec2(-1, -1), ivec2(1, 1)).build()
     }
 }
 

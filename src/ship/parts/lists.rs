@@ -2,6 +2,8 @@ use bevy::prelude::*;
 
 pub fn common_parts() -> impl SceneList {
     bsn_list! {
+      @super::hull_panel_3x3()
+      --
       @super::reactor_mk5()
       --
       @super::battery_100h4()

@@ -1,3 +1,4 @@
+pub mod grid;
 mod ui;
 
 use bevy::{
@@ -8,6 +9,7 @@ use leafwing_input_manager::{action_state::ActionState, input_map::InputMap};
 
 use crate::{
     GameState,
+    editor::grid::{GridManager, snap_cursor},
     input::{EditorAction, GameAction},
     player_ship,
     ship::{
@@ -34,6 +36,7 @@ impl Plugin for ShipEditorPlugin {
                 (update_cursor, update_preview_transform).chain(),
                 place_part,
                 ui::update_buttons,
+                grid::draw_grid_boxes,
             )
                 .run_if(in_state(GameState::ShipEditor)),
         );
@@ -41,6 +44,7 @@ impl Plugin for ShipEditorPlugin {
 }
 
 #[derive(Component, Clone, FromTemplate)]
+#[require(GridManager)]
 struct EditorManager {
     shop_entity: Entity,
     cursor_position: Option<Vec2>,
@@ -145,9 +149,11 @@ fn update_preview_transform(
                 return;
             };
 
+            let snapped = snap_cursor(cursor);
+
             *visibility = Visibility::Inherited;
-            transform.translation.x = cursor.x;
-            transform.translation.y = cursor.y;
+            transform.translation.x = snapped.x;
+            transform.translation.y = snapped.y;
         }
     });
 }
