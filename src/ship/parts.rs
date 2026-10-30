@@ -32,6 +32,7 @@ pub fn reactor_mk5() -> impl Scene {
       MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(GREEN)))
       PartCategory::Power
       PowerSource::new(600.0)
+      GridFootprint::builder().rect(TileType::Interior, ivec2(-1, -1), ivec2(1, 1)).build()
     }
 }
 
@@ -39,10 +40,13 @@ pub fn battery_100h4() -> impl Scene {
     bsn! {
       Name("Battery 100H4")
       Cost(2_000)
-      Mesh2d(asset_value(Rectangle::new(25.0, 50.0)))
-      MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(YELLOW)))
       PartCategory::Power
       PowerStorage::new(1000.0)
+      Mesh2d(asset_value(Rectangle::new(20.0, 40.0)))
+      MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(YELLOW)))
+      GridFootprint::builder()
+        .rect(TileType::Interior, ivec2(0, 0), ivec2(0, 1))
+        .build_offset(vec2(0.0, -10.0))
     }
 }
 
@@ -50,14 +54,22 @@ pub fn plasma_cannon() -> impl Scene {
     bsn! {
         Name("Plasma Cannon")
         Cost(1_000)
-        Mesh2d(asset_value(Rectangle::new(15.0, 100.0)))
-        MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(GRAY)))
         PartCategory::Weapons
         ProjectileWeapon {
             velocity: 500.0,
             frequency: 4.0,
             power_draw: 100.0,
         }
+        GridFootprint::builder()
+            .rect(TileType::Interior, ivec2(0, 0), ivec2(0, 1))
+            .tile(TileType::SemiExclusive, ivec2(0, 2))
+            .tile(TileType::Exclusive, ivec2(0, 3))
+            .build()
+        Children [
+            Transform::from_translation(vec3(0.0, 30.0, 0.0))
+            Mesh2d(asset_value(Rectangle::new(15.0, 80.0)))
+            MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(GRAY)))
+      ]
     }
 }
 

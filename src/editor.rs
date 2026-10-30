@@ -9,7 +9,7 @@ use leafwing_input_manager::{action_state::ActionState, input_map::InputMap};
 
 use crate::{
     GameState,
-    editor::grid::{GridManager, snap_cursor},
+    editor::grid::{GridFootprint, GridManager},
     input::{EditorAction, GameAction},
     player_ship,
     ship::{
@@ -138,18 +138,18 @@ fn update_cursor(
 
 fn update_preview_transform(
     editors: Query<&EditorManager>,
-    mut previews: Query<(&mut Visibility, &mut Transform), With<EditorPreview>>,
+    mut previews: Query<(&GridFootprint, &mut Visibility, &mut Transform), With<EditorPreview>>,
 ) {
     editors.iter().for_each(|editor| {
         if let Some(preview_id) = editor.preview_entity
-            && let Ok((mut visibility, mut transform)) = previews.get_mut(preview_id)
+            && let Ok((footprint, mut visibility, mut transform)) = previews.get_mut(preview_id)
         {
             let Some(cursor) = editor.cursor_position else {
                 *visibility = Visibility::Hidden;
                 return;
             };
 
-            let snapped = snap_cursor(cursor);
+            let snapped = footprint.snap_with_offset(cursor);
 
             *visibility = Visibility::Inherited;
             transform.translation.x = snapped.x;
@@ -160,27 +160,42 @@ fn update_preview_transform(
 
 fn place_part(
     mut commands: Commands,
-    mut editors: Query<(&mut EditorManager, &ActionState<EditorAction>)>,
-    previews: Query<(&Name, &Cost), With<EditorPreview>>,
+    mut editors: Query<(
+        &mut EditorManager,
+        &mut GridManager,
+        &ActionState<EditorAction>,
+    )>,
+    previews: Query<(&GridFootprint, &Transform, &Name, &Cost), With<EditorPreview>>,
 ) {
-    editors.iter_mut().for_each(|(mut editor, actions)| {
-        if let Some(preview_id) = editor.preview_entity
-            && actions.just_pressed(&EditorAction::Place)
-        {
-            let Ok((name, cost)) = previews.get(preview_id) else {
+    editors
+        .iter_mut()
+        .for_each(|(mut editor, mut grid, actions)| {
+            if let Some(preview_id) = editor.preview_entity
+                && actions.just_pressed(&EditorAction::Place)
+            {
+                let Ok((footprint, transform, name, cost)) = previews.get(preview_id) else {
+                    editor.preview_entity = None;
+                    commands.entity(preview_id).despawn();
+                    return;
+                };
+
+                let footprint_coord =
+                    footprint.translation_to_grid(transform.translation.truncate());
+                if !grid.validte_footprint(footprint_coord, footprint) {
+                    println!("Can't place {} at {}", name, footprint_coord);
+                    return;
+                };
+
+                println!("Adding {} for ${} at {}", name, cost.0, footprint_coord);
+
+                grid.place_footprint(footprint_coord, footprint);
+
                 editor.preview_entity = None;
-                commands.entity(preview_id).despawn();
-                return;
+                commands
+                    .entity(preview_id)
+                    .remove::<(EditorPreview, Visibility, InactivePart, Pickable)>();
             };
-
-            println!("Adding {} for ${}", name, cost.0);
-
-            editor.preview_entity = None;
-            commands
-                .entity(preview_id)
-                .remove::<(EditorPreview, Visibility, InactivePart, Pickable)>();
-        };
-    });
+        });
 }
 
 fn remove_editor_components(mut commands: Commands, editors: Query<Entity, With<EditorManager>>) {
