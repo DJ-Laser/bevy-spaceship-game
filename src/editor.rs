@@ -197,6 +197,9 @@ fn place_part(
 
 fn remove_editor_components(mut commands: Commands, editors: Query<Entity, With<EditorManager>>) {
     editors.iter().for_each(|editor_id| {
-        commands.entity(editor_id).remove::<EditorManager>();
+        commands
+            .entity(editor_id)
+            .despawn_related::<HasPreview>()
+            .remove::<EditorManager>();
     });
 }
