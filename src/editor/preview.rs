@@ -45,12 +45,14 @@ impl HasPreview {
 
         let preview_translation = grid_pos.as_vec2() * GRID_SIZE + preview_footprint.offset;
 
-        let errors = grid.validte_footprint(grid_pos, preview_footprint);
+        if self.cursor_grid_position != Some(grid_pos) {
+            let errors = grid.validte_footprint(grid_pos, preview_footprint);
+            self.placement_errors = errors.err();
+        }
 
         self.cursor_position = Some(cursor);
         self.cursor_grid_position = Some(grid_pos);
         self.preview_translation = Some(preview_translation);
-        self.placement_errors = errors.err();
     }
 
     pub fn move_cursor(
