@@ -44,7 +44,7 @@ impl Plugin for ShipEditorPlugin {
 }
 
 #[derive(Component, Clone, FromTemplate)]
-#[require(GridManager)]
+#[require(GridManager, Visibility)]
 struct EditorManager {
     shop_entity: Entity,
     cursor_position: Option<Vec2>,
@@ -63,7 +63,7 @@ struct ShopCatalog;
 fn editor_scene() -> impl SceneList {
     bsn_list! {
         @crate::camera::MainCamera {
-            follow: Option::Some(#PlayerShip)
+            follow: Option::None
         }
         --
         DespawnOnExit<GameState>(GameState::ShipEditor)

@@ -120,24 +120,15 @@ fn asteroid(radius: f32, hp: f32) -> impl Scene {
 }
 
 fn player_ship() -> impl Scene {
-    let ship_shape = Triangle2d::new(
-        Vec2 { x: -50.0, y: -50.0 },
-        Vec2 { x: 0.0, y: 50.0 },
-        Vec2 { x: 50.0, y: -50.0 },
-    );
-
     bsn! {
+        Transform::from_xyz(0.0, 0.0, 0.0)
         Spaceship
         ShipHull {
             max_hp: 1000.0,
         }
 
-        Transform::from_xyz(0.0, 0.0, 0.0)
-        Mesh2d(asset_value(ship_shape))
-        MeshMaterial2d<ColorMaterial>(asset_value(Color::srgb(0.0, 0.5, 1.0)))
 
         RigidBody::Dynamic
-        Collider::from(ship_shape)
     }
 }
 
