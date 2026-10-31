@@ -6,9 +6,7 @@ use bevy::{
 
 pub const GRID_SIZE: f32 = 20.0;
 
-pub fn snap_cursor(cursor: Vec2) -> Vec2 {
-    (cursor / GRID_SIZE).round() * GRID_SIZE
-}
+pub type FootprintValidateError = (Vec<IVec2>, HashSet<Entity>);
 
 /// Defines the tile layers for the ship editor
 /// Generally, tiles need a hull tile in the same region to be placed, and can't overlap
@@ -28,6 +26,15 @@ pub enum TileType {
     SemiExclusive,
     /// Exclusive tiles require a hull to NOT be placed and can't overlap
     Exclusive,
+}
+
+impl TileType {
+    fn can_place_without_hull(&self) -> bool {
+        matches!(
+            self,
+            TileType::Hull | TileType::SemiExclusive | TileType::Exclusive
+        )
+    }
 }
 
 pub struct GridFootprintBuilder(HashMap<TileType, HashSet<IVec2>>);
@@ -73,93 +80,118 @@ impl GridFootprintBuilder {
 #[require(Visibility, Transform)]
 pub struct GridFootprint {
     tiles: HashMap<TileType, HashSet<IVec2>>,
-    offset: Vec2,
+    pub offset: Vec2,
 }
 
 impl GridFootprint {
     pub fn builder() -> GridFootprintBuilder {
         GridFootprintBuilder(Default::default())
     }
-
-    fn visit_all(&self, mut visitor: impl FnMut(TileType, IVec2)) {
-        for (tile, offsets) in &self.tiles {
-            for offset in offsets {
-                visitor(*tile, *offset)
-            }
-        }
-    }
-
-    pub fn snap_with_offset(&self, cursor: Vec2) -> Vec2 {
-        snap_cursor(cursor + self.offset) - self.offset
-    }
-
-    pub fn translation_to_grid(&self, translation: Vec2) -> IVec2 {
-        ((translation + self.offset) / GRID_SIZE).as_ivec2()
-    }
 }
 
 #[derive(Component, Default, Clone)]
 pub struct GridManager {
-    tiles: HashMap<IVec2, HashSet<TileType>>,
+    tiles: HashMap<IVec2, HashMap<TileType, Entity>>,
 }
 
 impl GridManager {
-    fn get_tiles_at(&self, pos: IVec2) -> Option<&HashSet<TileType>> {
+    fn get_tiles_at(&self, pos: IVec2) -> Option<&HashMap<TileType, Entity>> {
         self.tiles.get(&pos)
     }
 
-    fn get_tiles_at_mut(&mut self, pos: IVec2) -> &mut HashSet<TileType> {
+    fn get_tiles_at_mut(&mut self, pos: IVec2) -> &mut HashMap<TileType, Entity> {
         self.tiles.entry(pos).or_default()
     }
 
-    fn can_place_tile_at(&self, pos: IVec2, tile: TileType) -> bool {
+    fn can_place_tile_at(&self, pos: IVec2, tile: TileType) -> Result<(), Vec<Entity>> {
         let Some(tiles) = self.get_tiles_at(pos) else {
-            return matches!(
-                tile,
-                TileType::Hull | TileType::SemiExclusive | TileType::Exclusive
-            );
+            return tile
+                .can_place_without_hull()
+                .then_some(())
+                .ok_or_else(Vec::new);
         };
 
-        if tiles.contains(&TileType::Exclusive)
-            || (!matches!(tile, TileType::Hull) && tiles.contains(&TileType::SemiExclusive))
-        {
-            return false;
+        if let Some(entity) = tiles.get(&TileType::Exclusive) {
+            return Err(vec![*entity]);
         }
 
-        match tile {
-            TileType::Hull => !tiles.contains(&TileType::Hull),
-            TileType::Unobtrusive => tiles.contains(&TileType::Hull),
+        if !matches!(tile, TileType::Hull)
+            && let Some(entity) = tiles.get(&TileType::SemiExclusive)
+        {
+            return Err(vec![*entity]);
+        }
+
+        let no_hull_err = (!tiles.contains_key(&TileType::Hull)).then(Vec::new);
+
+        fn one<T: Copy>(item: &T) -> Vec<T> {
+            vec![*item]
+        }
+
+        let errors = match tile {
+            TileType::Hull => tiles.get(&TileType::Hull).map(one),
+            TileType::Unobtrusive => no_hull_err,
             tile @ (TileType::Interior | TileType::Exterior) => {
-                tiles.contains(&TileType::Hull) && !tiles.contains(&tile)
+                tiles.get(&tile).map(one).or(no_hull_err)
             }
             TileType::SemiExclusive => {
-                tiles.is_empty() || (tiles.contains(&TileType::Hull) && tiles.len() == 1)
+                let entities: Vec<_> = tiles
+                    .iter()
+                    .filter(|(tile, _)| !matches!(tile, TileType::Hull))
+                    .map(|(_, entity)| entity)
+                    .copied()
+                    .collect();
+                (!entities.is_empty()).then_some(entities).or(no_hull_err)
             }
-            TileType::Exclusive => tiles.is_empty(),
+
+            TileType::Exclusive => {
+                let entities: Vec<_> = tiles.values().copied().collect();
+                (!entities.is_empty()).then_some(entities)
+            }
+        };
+
+        if let Some(errors) = errors {
+            Err(errors)
+        } else {
+            Ok(())
         }
     }
 
-    fn place_tile_at(&mut self, pos: IVec2, tile: TileType) {
+    fn place_tile_at(&mut self, pos: IVec2, tile: TileType, entity: Entity) {
         let tiles = self.get_tiles_at_mut(pos);
-        tiles.insert(tile);
+        tiles.insert(tile, entity);
     }
 
-    pub fn validte_footprint(&self, footprint_pos: IVec2, footprint: &GridFootprint) -> bool {
+    /// Checks if the footprint can be placed at a certain position on the grid
+    /// If placement fails, returns a list of colliding entities
+    pub fn validte_footprint(
+        &self,
+        footprint_pos: IVec2,
+        footprint: &GridFootprint,
+    ) -> Result<(), FootprintValidateError> {
+        let mut res = Ok(());
+
         for (tile, offsets) in &footprint.tiles {
             for offset in offsets {
-                if !self.can_place_tile_at(footprint_pos + offset, *tile) {
-                    return false;
+                let grid_coord = footprint_pos + offset;
+                if let Err(tile_errors) = self.can_place_tile_at(grid_coord, *tile) {
+                    let (mut positions, mut errors): FootprintValidateError =
+                        res.err().unwrap_or_default();
+                    positions.push(grid_coord);
+                    errors.extend(tile_errors);
+                    res = Err((positions, errors));
                 }
             }
         }
 
-        true
+        res
     }
 
-    pub fn place_footprint(&mut self, footprint_pos: IVec2, footprint: &GridFootprint) {
-        footprint.visit_all(|tile, offset| {
-            self.place_tile_at(footprint_pos + offset, tile);
-        });
+    pub fn place_footprint(&mut self, footprint_pos: IVec2, footprint: (Entity, &GridFootprint)) {
+        for (tile, offsets) in &footprint.1.tiles {
+            for offset in offsets {
+                self.place_tile_at(footprint_pos + offset, *tile, footprint.0);
+            }
+        }
     }
 }
 
@@ -174,24 +206,25 @@ pub fn draw_grid_boxes(
                 return;
             }
 
-            footprint.visit_all(|tile, tile_offset| {
-                gizmos.rect_2d(
-                    Isometry2d::new(
-                        transform.translation().truncate()
-                            + tile_offset.as_vec2() * GRID_SIZE
-                            + footprint.offset,
-                        Rot2::default(),
-                    ),
-                    Vec2::splat(GRID_SIZE),
-                    match tile {
-                        TileType::Hull => DARK_CYAN,
-                        TileType::Unobtrusive => GRAY,
-                        TileType::Interior => YELLOW,
-                        TileType::Exterior => GREEN,
-                        TileType::SemiExclusive => ORANGE,
-                        TileType::Exclusive => RED,
-                    },
-                );
-            });
+            for (tile, offsets) in &footprint.tiles {
+                for tile_offset in offsets {
+                    gizmos.rect_2d(
+                        Isometry2d::new(
+                            transform.translation().truncate() + tile_offset.as_vec2() * GRID_SIZE
+                                - footprint.offset,
+                            Rot2::default(),
+                        ),
+                        Vec2::splat(GRID_SIZE),
+                        match tile {
+                            TileType::Hull => DARK_CYAN,
+                            TileType::Unobtrusive => GRAY,
+                            TileType::Interior => YELLOW,
+                            TileType::Exterior => GREEN,
+                            TileType::SemiExclusive => ORANGE,
+                            TileType::Exclusive => RED,
+                        },
+                    );
+                }
+            }
         });
 }

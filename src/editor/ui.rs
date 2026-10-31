@@ -8,7 +8,7 @@ use bevy::{
 
 use crate::{
     GameState,
-    editor::{EditorManager, EditorPreview, ShopCatalog},
+    editor::{EditorManager, ShopCatalog, preview::EditorPreview},
     ship::parts::Cost,
 };
 
@@ -52,21 +52,14 @@ fn button_on_activate(
     event: On<Activate>,
     mut commands: Commands,
     buttons: Query<&PartSelectionButton>,
-    mut editors: Query<&mut EditorManager>,
 ) {
     let Ok(button) = buttons.get(event.entity) else {
         return;
     };
 
-    let Ok(mut editor) = editors.get_mut(button.editor) else {
-        return;
-    };
-
-    if let Some(preview_id) = editor.preview_entity {
-        commands.entity(preview_id).despawn();
-    }
-
-    let new_preview_id = commands.spawn((ChildOf(button.editor), EditorPreview)).id();
+    let new_preview_id = commands
+        .spawn((ChildOf(button.editor), EditorPreview(button.editor)))
+        .id();
 
     commands
         .entity(button.blueprint)
@@ -74,8 +67,6 @@ fn button_on_activate(
             b.linked_cloning(true);
             b.insert_mode(bevy::ecs::bundle::InsertMode::Keep);
         }));
-
-    editor.preview_entity = Some(new_preview_id);
 }
 
 pub fn populate_shop_ui(
