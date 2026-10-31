@@ -6,7 +6,7 @@ use bevy::{
 
 pub const GRID_SIZE: f32 = 20.0;
 
-pub type FootprintValidateError = (Vec<IVec2>, HashSet<Entity>);
+pub type FootprintValidateError = (HashSet<IVec2>, HashSet<Entity>);
 
 /// Defines the tile layers for the ship editor
 /// Generally, tiles need a hull tile in the same region to be placed, and can't overlap
@@ -176,7 +176,7 @@ impl GridManager {
                 if let Err(tile_errors) = self.can_place_tile_at(grid_coord, *tile) {
                     let (mut positions, mut errors): FootprintValidateError =
                         res.err().unwrap_or_default();
-                    positions.push(grid_coord);
+                    positions.insert(grid_coord);
                     errors.extend(tile_errors);
                     res = Err((positions, errors));
                 }
