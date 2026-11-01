@@ -8,7 +8,10 @@ use bevy::{
 
 use crate::{
     GameState,
-    editor::{EditorManager, ShopCatalog, preview::EditorPreview},
+    editor::{
+        EditorManager, ShopCatalog,
+        preview::{EditorPreview, HasPreview},
+    },
     ship::parts::Cost,
 };
 
@@ -56,6 +59,10 @@ fn button_on_activate(
     let Ok(button) = buttons.get(event.entity) else {
         return;
     };
+
+    commands
+        .entity(button.editor)
+        .despawn_related::<HasPreview>();
 
     let new_preview_id = commands
         .spawn((ChildOf(button.editor), EditorPreview(button.editor)))
