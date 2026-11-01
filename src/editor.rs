@@ -122,14 +122,26 @@ fn update_cursor(
     mut move_events: MessageReader<PointerMove>,
     mut editors: Query<(&mut HasPreview, &GridManager, &GlobalTransform), With<EditorManager>>,
     previews: Query<&GridFootprint, With<EditorPreview>>,
+    nodes: Query<(), With<Node>>,
 ) {
-    let Some(hit_pos) = move_events.read().last().and_then(|e| e.hit.position) else {
+    let Some(event) = move_events.read().last() else {
         return;
+    };
+
+    let hit_pos = if nodes.contains(event.entity) {
+        None
+    } else {
+        event.hit.position
     };
 
     editors
         .iter_mut()
         .for_each(|(mut editor, grid, transform)| {
+            let Some(hit_pos) = hit_pos else {
+                editor.set_cursor_none();
+                return;
+            };
+
             let relative_translation = transform.affine().inverse().transform_point3(hit_pos);
             let Ok(preview) = previews.get(editor.preview()) else {
                 editor.set_cursor_none();
