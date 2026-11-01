@@ -72,6 +72,9 @@ pub fn plasma_cannon() -> impl Scene {
             Mesh2d(asset_value(Rectangle::new(15.0, 80.0)))
             Collider::from(Rectangle::new(15.0, 80.0))
             MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(GRAY)))
+            --
+            Transform::from_translation(vec3(0.0, 60.0, 0.0))
+            ProjectileSpawnPoint
       ]
     }
 }

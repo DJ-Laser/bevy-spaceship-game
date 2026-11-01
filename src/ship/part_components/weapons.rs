@@ -15,24 +15,40 @@ pub enum WeaponAction {
 }
 
 #[derive(Component, Clone, Default)]
-#[require(PowerConsumer, ActionState<WeaponAction>, Transform)]
+pub struct ProjectileWeaponState {
+    fire_cooldown: f32,
+    last_spawn_point: usize,
+}
+
+#[derive(Component, Clone, Default)]
+#[require(ProjectileWeaponState, PowerConsumer, ActionState<WeaponAction>, Transform)]
 pub struct ProjectileWeapon {
     pub velocity: f32,
     pub frequency: f32,
     /// Power draw / sec needed for maximum fire rate
     pub power_draw: f32,
-
-    fire_cooldown: f32,
 }
 
+#[derive(Component, Clone, Default)]
+pub struct ProjectileSpawnPoint;
+
 pub fn request_weapon_power(
-    mut weapons: Query<(&ProjectileWeapon, &mut PowerConsumer), Without<InactivePart>>,
+    mut weapons: Query<
+        (
+            &ProjectileWeapon,
+            &ProjectileWeaponState,
+            &mut PowerConsumer,
+        ),
+        Without<InactivePart>,
+    >,
 ) {
-    weapons.iter_mut().for_each(|(weapon, mut consumer)| {
-        if weapon.fire_cooldown > 0.0 {
-            consumer.request_power(weapon.power_draw);
-        }
-    });
+    weapons
+        .iter_mut()
+        .for_each(|(weapon, state, mut consumer)| {
+            if state.fire_cooldown > 0.0 {
+                consumer.request_power(weapon.power_draw);
+            }
+        });
 }
 
 pub fn fire_weapons(
@@ -41,44 +57,52 @@ pub fn fire_weapons(
     spaceships: Query<&LinearVelocity, With<Spaceship>>,
     mut weapons: Query<
         (
+            &Children,
             &ChildOf,
-            &mut ProjectileWeapon,
+            &ProjectileWeapon,
+            &mut ProjectileWeaponState,
             &ActionState<WeaponAction>,
             &mut PowerConsumer,
             &GlobalTransform,
         ),
         Without<InactivePart>,
     >,
+    spawn_points: Query<&GlobalTransform, With<ProjectileSpawnPoint>>,
 ) {
-    weapons
-        .iter_mut()
-        .for_each(|(p, mut weapon, actions, consumer, tramsform)| {
-            if weapon.fire_cooldown > 0.0 {
-                weapon.fire_cooldown -= time.delta_secs() * consumer.allocated_fraction();
+    weapons.iter_mut().for_each(
+        |(children, parent, weapon, mut state, actions, consumer, weapon_transform)| {
+            if state.fire_cooldown > 0.0 {
+                state.fire_cooldown -= time.delta_secs() * consumer.allocated_fraction();
             }
 
-            if weapon.fire_cooldown <= 0.0 && actions.pressed(&WeaponAction::Fire) {
-                let Ok(linear_velocity) = spaceships.get(p.get()) else {
+            if state.fire_cooldown <= 0.0 && actions.pressed(&WeaponAction::Fire) {
+                let Ok(linear_velocity) = spaceships.get(parent.get()) else {
                     return;
                 };
 
-                let rotation = tramsform.rotation().to_euler(EulerRot::XYZ).2;
+                let mut spawn_points = spawn_points.iter_many(children).matched().enumerate();
+                let first = spawn_points.next();
+                let spawn_point = spawn_points.nth(state.last_spawn_point);
+                let (index, spawn_point) = spawn_point.or(first).unwrap_or((0, weapon_transform));
+                state.last_spawn_point = index;
+
+                let rotation = spawn_point.rotation().to_euler(EulerRot::XYZ).2;
                 let velocity =
                     linear_velocity.0 + Vec2::from_angle(rotation + FRAC_PI_2) * weapon.velocity;
 
-                weapon.fire_cooldown = 1.0 / weapon.frequency;
+                state.fire_cooldown = 1.0 / weapon.frequency;
 
                 let circle = Circle::new(2.5);
                 commands
                     .queue_spawn_scene(bsn! {
-                        Position({tramsform.translation().truncate()})
+                        Position({spawn_point.translation().truncate()})
                         LinearVelocity(velocity)
-                        RigidBody
+                        RigidBody::Kinematic
                         Collider::from(circle)
-                        ColliderDensity(1.0)
+                        Sensor
                         CollisionEventsEnabled
                         Projectile {
-                            owner: {p.get()}
+                            owner: {parent.get()}
                             damage: 10.0,
                         }
                         MeshMaterial2d<ColorMaterial>(asset_value(Color::srgb(1.0, 1.0, 0.0)))
@@ -86,7 +110,8 @@ pub fn fire_weapons(
                     })
                     .observe(apply_projectile_damage);
             }
-        });
+        },
+    );
 }
 
 #[derive(Component, Default, Clone)]
