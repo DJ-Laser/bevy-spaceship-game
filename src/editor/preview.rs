@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    editor::grid::{FootprintValidateError, GRID_SIZE, GridFootprint, GridManager},
+    grid::{FootprintValidateError, GRID_SIZE, GridFootprint, GridManager},
     ship::part_components::InactivePart,
 };
 

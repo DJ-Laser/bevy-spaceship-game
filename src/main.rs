@@ -1,5 +1,6 @@
 mod camera;
 mod editor;
+mod grid;
 mod hud;
 mod input;
 mod main_menu;

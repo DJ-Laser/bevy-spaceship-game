@@ -3,10 +3,9 @@ use bevy::{
     prelude::*,
 };
 
-use crate::editor::{
-    EditorManager,
+use crate::{
+    editor::{EditorManager, preview::HasPreview},
     grid::{GRID_SIZE, GridFootprint, TileType},
-    preview::HasPreview,
 };
 
 #[derive(Default, Reflect, GizmoConfigGroup)]

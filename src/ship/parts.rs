@@ -1,7 +1,7 @@
 pub mod lists;
 
 use crate::{
-    editor::grid::{GridFootprint, TileType},
+    grid::{GridFootprint, TileType},
     ship::part_components::*,
 };
 use avian2d::prelude::*;

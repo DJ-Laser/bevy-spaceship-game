@@ -1,10 +1,5 @@
 use avian2d::parry::utils::{hashmap::HashMap, hashset::HashSet};
-use bevy::{
-    color::palettes::css::{DARK_CYAN, GRAY, GREEN, ORANGE, RED, YELLOW},
-    prelude::*,
-};
-
-use crate::editor::{EditorManager, preview::HasPreview};
+use bevy::prelude::*;
 
 pub const GRID_SIZE: f32 = 20.0;
 

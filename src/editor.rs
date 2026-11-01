@@ -1,5 +1,4 @@
 mod gizmos;
-pub mod grid;
 mod preview;
 mod ui;
 
@@ -11,10 +10,8 @@ use leafwing_input_manager::{action_state::ActionState, input_map::InputMap};
 
 use crate::{
     GameState,
-    editor::{
-        grid::{GridFootprint, GridManager},
-        preview::{EditorPreview, HasPreview},
-    },
+    editor::preview::{EditorPreview, HasPreview},
+    grid::{GridFootprint, GridManager},
     input::{EditorAction, GameAction},
     player_ship,
     ship::{
