@@ -1,3 +1,4 @@
+mod gizmos;
 pub mod grid;
 mod preview;
 mod ui;
@@ -40,10 +41,13 @@ impl Plugin for ShipEditorPlugin {
                 (update_cursor, update_preview).chain(),
                 place_part,
                 ui::update_buttons,
-                grid::draw_grid_boxes,
+                gizmos::draw_grid_boxes,
             )
                 .run_if(in_state(GameState::ShipEditor)),
         );
+
+        app.init_gizmo_group::<gizmos::EditorGridGizmos>();
+        app.add_systems(Startup, gizmos::setup_editor_gizmos);
     }
 }
 

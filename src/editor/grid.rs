@@ -4,6 +4,8 @@ use bevy::{
     prelude::*,
 };
 
+use crate::editor::{EditorManager, preview::HasPreview};
+
 pub const GRID_SIZE: f32 = 20.0;
 
 pub type FootprintValidateError = (HashSet<IVec2>, HashSet<Entity>);
@@ -79,7 +81,7 @@ impl GridFootprintBuilder {
 #[derive(Component, Default, Clone)]
 #[require(Visibility, Transform)]
 pub struct GridFootprint {
-    tiles: HashMap<TileType, HashSet<IVec2>>,
+    pub tiles: HashMap<TileType, HashSet<IVec2>>,
     pub offset: Vec2,
 }
 
@@ -193,38 +195,4 @@ impl GridManager {
             }
         }
     }
-}
-
-pub fn draw_grid_boxes(
-    grid_footprints: Query<(&GridFootprint, &GlobalTransform, &InheritedVisibility)>,
-    mut gizmos: Gizmos,
-) {
-    grid_footprints
-        .iter()
-        .for_each(|(footprint, transform, visibility)| {
-            if matches!(*visibility, InheritedVisibility::HIDDEN) {
-                return;
-            }
-
-            for (tile, offsets) in &footprint.tiles {
-                for tile_offset in offsets {
-                    gizmos.rect_2d(
-                        Isometry2d::new(
-                            transform.translation().truncate() + tile_offset.as_vec2() * GRID_SIZE
-                                - footprint.offset,
-                            Rot2::default(),
-                        ),
-                        Vec2::splat(GRID_SIZE),
-                        match tile {
-                            TileType::Hull => DARK_CYAN,
-                            TileType::Unobtrusive => GRAY,
-                            TileType::Interior => YELLOW,
-                            TileType::Exterior => GREEN,
-                            TileType::SemiExclusive => ORANGE,
-                            TileType::Exclusive => RED,
-                        },
-                    );
-                }
-            }
-        });
 }
