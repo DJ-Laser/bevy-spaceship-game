@@ -1,5 +1,7 @@
-use avian2d::parry::utils::{hashmap::HashMap, hashset::HashSet};
-use bevy::prelude::*;
+use bevy::{
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
+};
 
 pub const GRID_SIZE: f32 = 20.0;
 
