@@ -1,7 +1,13 @@
+mod footprint;
+mod rotation;
+
 use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
+
+pub use footprint::{GridFootprint, PositionedFootprint};
+pub use rotation::{RotationIncrement, RotationStyle};
 
 pub const GRID_SIZE: f32 = 20.0;
 
@@ -33,58 +39,6 @@ impl TileType {
             self,
             TileType::Hull | TileType::SemiExclusive | TileType::Exclusive
         )
-    }
-}
-
-pub struct GridFootprintBuilder(HashMap<TileType, HashSet<IVec2>>);
-
-impl GridFootprintBuilder {
-    fn positions_mut(&mut self, tile: TileType) -> &mut HashSet<IVec2> {
-        self.0.entry(tile).or_default()
-    }
-
-    pub fn tile(mut self, tile: TileType, pos: IVec2) -> Self {
-        self.positions_mut(tile).insert(pos);
-
-        self
-    }
-
-    pub fn rect(mut self, tile: TileType, a: IVec2, b: IVec2) -> Self {
-        let positions = self.positions_mut(tile);
-
-        for x in a.x..=b.x {
-            for y in a.y..=b.y {
-                positions.insert(ivec2(x, y));
-            }
-        }
-
-        self
-    }
-
-    pub fn build_offset(self, offset: Vec2) -> GridFootprint {
-        GridFootprint {
-            tiles: self.0,
-            offset,
-        }
-    }
-
-    pub fn build(self) -> GridFootprint {
-        self.build_offset(Vec2::ZERO)
-    }
-}
-
-/// Defines an object's grid footprint
-/// Coordinates are relative to the object's origin
-#[derive(Component, Default, Clone)]
-#[require(Visibility, Transform)]
-pub struct GridFootprint {
-    pub tiles: HashMap<TileType, HashSet<IVec2>>,
-    pub offset: Vec2,
-}
-
-impl GridFootprint {
-    pub fn builder() -> GridFootprintBuilder {
-        GridFootprintBuilder(Default::default())
     }
 }
 
@@ -164,32 +118,26 @@ impl GridManager {
     /// If placement fails, returns a list of colliding entities
     pub fn validte_footprint(
         &self,
-        footprint_pos: IVec2,
-        footprint: &GridFootprint,
+        footprint: PositionedFootprint,
     ) -> Result<(), FootprintValidateError> {
         let mut res = Ok(());
 
-        for (tile, offsets) in &footprint.tiles {
-            for offset in offsets {
-                let grid_coord = footprint_pos + offset;
-                if let Err(tile_errors) = self.can_place_tile_at(grid_coord, *tile) {
-                    let (mut positions, mut errors): FootprintValidateError =
-                        res.err().unwrap_or_default();
-                    positions.insert(grid_coord);
-                    errors.extend(tile_errors);
-                    res = Err((positions, errors));
-                }
+        for (tile, tile_pos) in footprint.tiles() {
+            if let Err(tile_errors) = self.can_place_tile_at(tile_pos, tile) {
+                let (mut positions, mut errors): FootprintValidateError =
+                    res.err().unwrap_or_default();
+                positions.insert(tile_pos);
+                errors.extend(tile_errors);
+                res = Err((positions, errors));
             }
         }
 
         res
     }
 
-    pub fn place_footprint(&mut self, footprint_pos: IVec2, footprint: (Entity, &GridFootprint)) {
-        for (tile, offsets) in &footprint.1.tiles {
-            for offset in offsets {
-                self.place_tile_at(footprint_pos + offset, *tile, footprint.0);
-            }
+    pub fn place_footprint(&mut self, footprint_id: Entity, footprint: PositionedFootprint) {
+        for (tile, tile_pos) in footprint.tiles() {
+            self.place_tile_at(tile_pos, tile, footprint_id);
         }
     }
 }

@@ -59,6 +59,8 @@ pub enum EditorAction {
     MoveCamera,
 
     Place,
+    RotateNext,
+    RotatePrev,
     Remove,
 
     Slot0,
@@ -105,6 +107,9 @@ impl Keybinds {
         input_map.insert_dual_axis(EditorAction::MoveCamera, VirtualDPad::wasd());
         input_map.insert(EditorAction::Place, MouseButton::Left);
         input_map.insert(EditorAction::Remove, MouseButton::Right);
+
+        input_map.insert(EditorAction::RotatePrev, KeyCode::KeyQ);
+        input_map.insert(EditorAction::RotateNext, KeyCode::KeyE);
 
         input_map.insert(EditorAction::Slot0, KeyCode::Digit0);
         input_map.insert(EditorAction::Slot1, KeyCode::Digit1);

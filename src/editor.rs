@@ -11,7 +11,7 @@ use leafwing_input_manager::{action_state::ActionState, input_map::InputMap};
 use crate::{
     GameState,
     editor::preview::{EditorPreview, HasPreview},
-    grid::{GridFootprint, GridManager},
+    grid::{GridFootprint, GridManager, PositionedFootprint, RotationIncrement, RotationStyle},
     input::{EditorAction, GameAction},
     player_ship,
     ship::{
@@ -38,6 +38,7 @@ impl Plugin for ShipEditorPlugin {
                 (update_cursor, update_preview).chain(),
                 place_part,
                 ui::update_buttons,
+                rotate_preview,
                 gizmos::draw_grid_boxes,
             )
                 .run_if(in_state(GameState::ShipEditor)),
@@ -121,7 +122,7 @@ fn editor_scene() -> impl SceneList {
 fn update_cursor(
     mut move_events: MessageReader<PointerMove>,
     mut editors: Query<(&mut HasPreview, &GridManager, &GlobalTransform), With<EditorManager>>,
-    previews: Query<&GridFootprint, With<EditorPreview>>,
+    previews: Query<(&RotationIncrement, &GridFootprint), With<EditorPreview>>,
     nodes: Query<(), With<Node>>,
 ) {
     let Some(event) = move_events.read().last() else {
@@ -143,12 +144,12 @@ fn update_cursor(
             };
 
             let relative_translation = transform.affine().inverse().transform_point3(hit_pos);
-            let Ok(preview) = previews.get(editor.preview()) else {
+            let Ok((rotation, preview)) = previews.get(editor.preview()) else {
                 editor.set_cursor_none();
                 return;
             };
 
-            editor.set_cursor(relative_translation.truncate(), grid, preview);
+            editor.set_cursor(relative_translation.truncate(), grid, *rotation, preview);
         });
 }
 
@@ -170,13 +171,58 @@ fn update_preview(
     });
 }
 
+fn rotate_preview(
+    mut editors: Query<
+        (&mut HasPreview, &GridManager, &ActionState<EditorAction>),
+        With<EditorManager>,
+    >,
+    mut previews: Query<
+        (
+            &RotationStyle,
+            &mut RotationIncrement,
+            &mut Transform,
+            &GridFootprint,
+        ),
+        With<EditorPreview>,
+    >,
+) {
+    editors.iter_mut().for_each(|(mut editor, grid, actions)| {
+        let Ok((style, mut rotation, mut transform, footprint)) =
+            previews.get_mut(editor.preview())
+        else {
+            return;
+        };
+
+        let prev = actions.just_pressed(&EditorAction::RotatePrev);
+        let next = actions.just_pressed(&EditorAction::RotateNext);
+
+        if prev == next {
+            return;
+        }
+
+        if prev {
+            *rotation = rotation.prev(style);
+        }
+
+        if next {
+            *rotation = rotation.next(style);
+        }
+
+        transform.rotation = Quat::from_rotation_z(rotation.rotation_radians());
+        editor.update_preview(grid, *rotation, footprint);
+    });
+}
+
 fn place_part(
     mut commands: Commands,
     mut editors: Query<
         (&HasPreview, &mut GridManager, &ActionState<EditorAction>),
         With<EditorManager>,
     >,
-    previews: Query<(Entity, &GridFootprint, &Name, &Cost), With<EditorPreview>>,
+    previews: Query<
+        (Entity, &RotationIncrement, &GridFootprint, &Name, &Cost),
+        With<EditorPreview>,
+    >,
 ) {
     editors.iter_mut().for_each(|(editor, mut grid, actions)| {
         let preview_id = editor.preview();
@@ -185,7 +231,8 @@ fn place_part(
         };
 
         if actions.just_pressed(&EditorAction::Place) {
-            let Ok((footprint_id, footprint, name, cost)) = previews.get(preview_id) else {
+            let Ok((footprint_id, rotation, footprint, name, cost)) = previews.get(preview_id)
+            else {
                 commands.entity(preview_id).despawn();
                 return;
             };
@@ -199,7 +246,10 @@ fn place_part(
 
             println!("Adding {} for ${} at {}", name, cost.0, footprint_coord);
 
-            grid.place_footprint(footprint_coord, (footprint_id, footprint));
+            grid.place_footprint(
+                footprint_id,
+                PositionedFootprint::new(footprint, footprint_coord, *rotation),
+            );
 
             commands
                 .entity(preview_id)

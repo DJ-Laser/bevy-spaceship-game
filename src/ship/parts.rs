@@ -1,7 +1,7 @@
 pub mod lists;
 
 use crate::{
-    grid::{GridFootprint, TileType},
+    grid::{GridFootprint, RotationStyle, TileType},
     ship::part_components::*,
 };
 use avian2d::prelude::*;
@@ -49,6 +49,7 @@ pub fn battery_100h4() -> impl Scene {
       GridFootprint::builder()
         .rect(TileType::Interior, ivec2(0, 0), ivec2(0, 1))
         .build_offset(vec2(0.0, 10.0))
+      RotationStyle::Rotate90Symmetric
     }
 }
 
@@ -67,6 +68,8 @@ pub fn plasma_cannon() -> impl Scene {
             .tile(TileType::SemiExclusive, ivec2(0, 2))
             .rect(TileType::Exclusive, ivec2(0, 3), ivec2(0, 13))
             .build()
+        RotationStyle::Rotate90
+
         Children [
             Transform::from_translation(vec3(0.0, 30.0, 0.0))
             Mesh2d(asset_value(Rectangle::new(15.0, 80.0)))
@@ -105,7 +108,7 @@ pub fn engine_xn_2000() -> impl Scene {
         GridFootprint::builder()
         .rect(TileType::Exclusive, ivec2(0, 0), ivec2(1, 0))
         .rect(TileType::Exclusive, ivec2(0, -1), ivec2(1, -5))
-        .build_offset(vec2(7.5, -5.0))
+        .build_offset(vec2(10.0, -2.5))
     }
 }
 
@@ -136,5 +139,6 @@ pub fn rcs_tl_150() -> impl Scene {
             power_draw: 50.0
         }
         GridFootprint::builder().tile(TileType::Exclusive, ivec2(0, 0)).build()
+        RotationStyle::Rotate90
     }
 }

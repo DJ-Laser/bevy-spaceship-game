@@ -5,7 +5,7 @@ use bevy::{
 
 use crate::{
     editor::{EditorManager, preview::HasPreview},
-    grid::{GRID_SIZE, GridFootprint, TileType},
+    grid::{GRID_SIZE, GridFootprint, PositionedFootprint, RotationIncrement, TileType},
 };
 
 #[derive(Default, Reflect, GizmoConfigGroup)]
@@ -18,13 +18,13 @@ pub fn setup_editor_gizmos(mut gizmo_config: ResMut<GizmoConfigStore>) {
 
 fn draw_footprint(
     gizmos: &mut Gizmos<EditorGridGizmos>,
-    footprint: &GridFootprint,
     world_pos: Vec2,
+    footprint: PositionedFootprint,
 ) {
     let offsets = vec![ivec2(1, 0), ivec2(0, 1), ivec2(-1, 0), ivec2(0, -1)];
 
-    for (tile, tile_grid) in &footprint.tiles {
-        let color = match tile {
+    for grid in footprint.grids() {
+        let color = match grid.tile() {
             TileType::Hull => DARK_CYAN,
             TileType::Unobtrusive => GRAY,
             TileType::Interior => YELLOW,
@@ -33,11 +33,11 @@ fn draw_footprint(
             TileType::Exclusive => DARK_RED,
         };
 
-        for tile_pos in tile_grid {
-            let tile_center = world_pos + tile_pos.as_vec2() * GRID_SIZE - footprint.offset;
+        for tile_pos in grid.positions() {
+            let tile_center = world_pos - footprint.offset() + tile_pos.as_vec2() * GRID_SIZE;
 
             for offset in &offsets {
-                if tile_grid.contains(&(tile_pos + offset)) {
+                if grid.contains(tile_pos + offset) {
                     continue;
                 }
 
@@ -54,26 +54,39 @@ fn draw_footprint(
 
 pub fn draw_grid_boxes(
     editors: Query<(&HasPreview, &GlobalTransform), With<EditorManager>>,
-    grid_footprints: Query<(&GridFootprint, &GlobalTransform, &InheritedVisibility)>,
+    grid_footprints: Query<(
+        &RotationIncrement,
+        &GridFootprint,
+        &GlobalTransform,
+        &InheritedVisibility,
+    )>,
     mut gizmos: Gizmos<EditorGridGizmos>,
 ) {
     editors.iter().for_each(|(editor, editor_transform)| {
-        if let Ok((footprint, transform, visibility)) = grid_footprints.get(editor.preview())
+        if let Ok((rotation, footprint, transform, visibility)) =
+            grid_footprints.get(editor.preview())
             && matches!(*visibility, InheritedVisibility::VISIBLE)
         {
-            draw_footprint(&mut gizmos, footprint, transform.translation().truncate());
+            draw_footprint(
+                &mut gizmos,
+                transform.translation().truncate(),
+                PositionedFootprint::new(footprint, IVec2::ZERO, *rotation),
+            );
         }
 
         let Some((tiles, entities)) = editor.placement_errors() else {
             return;
         };
 
-        grid_footprints
-            .iter_many(entities)
-            .matched()
-            .for_each(|(footprint, transform, _)| {
-                draw_footprint(&mut gizmos, footprint, transform.translation().truncate());
-            });
+        grid_footprints.iter_many(entities).matched().for_each(
+            |(rotation, footprint, transform, _)| {
+                draw_footprint(
+                    &mut gizmos,
+                    transform.translation().truncate(),
+                    PositionedFootprint::new(footprint, IVec2::ZERO, *rotation),
+                );
+            },
+        );
 
         for tile_pos in tiles {
             let world_pos = editor_transform.translation().truncate();
