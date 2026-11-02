@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 bevy = { version = "0.20.1", default-features = false, features = ["2d", "ui", "audio"] }
-bevy-persistent = { git = "https://github.com/analytik/bevy-persistent/", branch = "bevy-0.20", features = [ "toml", "pretty" ] }
+bevy-persistent = { version = "0.12.0", features = [ "toml", "pretty" ] }
 avian2d = "0.8"
 leafwing-input-manager = "0.22"
 log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
