@@ -48,7 +48,7 @@ impl GridFootprintBuilder {
 #[require(Visibility, Transform, RotationStyle)]
 pub struct GridFootprint {
     pub tiles: HashMap<TileType, HashSet<IVec2>>,
-    pub offset: Vec2,
+    offset: Vec2,
 }
 
 impl GridFootprint {
@@ -57,6 +57,32 @@ impl GridFootprint {
     }
 }
 
+#[derive(Clone, Copy)]
+pub struct RotatedFootprint<'a> {
+    footprint: &'a GridFootprint,
+    rotation: RotationIncrement,
+}
+
+impl<'a> RotatedFootprint<'a> {
+    pub fn new(footprint: &'a GridFootprint, rotation: RotationIncrement) -> Self {
+        Self {
+            footprint,
+            rotation,
+        }
+    }
+
+    pub fn with_position(self, position: IVec2) -> PositionedFootprint<'a> {
+        PositionedFootprint::new(self.footprint, position, self.rotation)
+    }
+
+    pub fn offset(&self) -> Vec2 {
+        self.footprint
+            .offset
+            .rotate_angle(self.rotation.rotation_radians())
+    }
+}
+
+#[derive(Clone, Copy)]
 pub struct PositionedFootprint<'a> {
     footprint: &'a GridFootprint,
     position: IVec2,
@@ -73,7 +99,9 @@ impl<'a> PositionedFootprint<'a> {
     }
 
     pub fn offset(&self) -> Vec2 {
-        self.footprint.offset
+        self.footprint
+            .offset
+            .rotate_angle(self.rotation.rotation_radians())
     }
 
     pub fn tiles(&self) -> impl Iterator<Item = (TileType, IVec2)> {

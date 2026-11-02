@@ -6,7 +6,7 @@ use bevy::{
     prelude::*,
 };
 
-pub use footprint::{GridFootprint, PositionedFootprint};
+pub use footprint::{GridFootprint, PositionedFootprint, RotatedFootprint};
 pub use rotation::{RotationIncrement, RotationStyle};
 
 pub const GRID_SIZE: f32 = 20.0;

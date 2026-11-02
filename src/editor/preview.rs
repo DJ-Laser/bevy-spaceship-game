@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    grid::{
-        FootprintValidateError, GRID_SIZE, GridFootprint, GridManager, PositionedFootprint,
-        RotationIncrement,
-    },
+    grid::{FootprintValidateError, GRID_SIZE, GridManager, RotatedFootprint},
     ship::part_components::InactivePart,
 };
 
@@ -36,21 +33,20 @@ impl HasPreview {
         self.placement_errors = None;
     }
 
-    pub fn update_preview(
-        &mut self,
-        grid: &GridManager,
-        footprint_rot: RotationIncrement,
-        preview_footprint: &GridFootprint,
-    ) {
-        let Some(grid_pos) = self.cursor_grid_position else {
+    pub fn update_preview(&mut self, grid: &GridManager, preview_footprint: RotatedFootprint) {
+        let Some(cursor) = self.cursor_position else {
             return;
         };
 
-        let errors = grid.validte_footprint(PositionedFootprint::new(
-            preview_footprint,
-            grid_pos,
-            footprint_rot,
-        ));
+        let grid_pos = ((cursor - preview_footprint.offset()) / GRID_SIZE)
+            .round()
+            .as_ivec2();
+        self.cursor_grid_position = Some(grid_pos);
+
+        let preview_translation = grid_pos.as_vec2() * GRID_SIZE + preview_footprint.offset();
+        self.preview_translation = Some(preview_translation);
+
+        let errors = grid.validte_footprint(preview_footprint.with_position(grid_pos));
         self.placement_errors = errors.err();
     }
 
@@ -58,40 +54,21 @@ impl HasPreview {
         &mut self,
         cursor: Vec2,
         grid: &GridManager,
-        footprint_rot: RotationIncrement,
-        preview_footprint: &GridFootprint,
+        preview_footprint: RotatedFootprint,
     ) {
         self.cursor_position = Some(cursor);
-
-        let prev_grid_pos = self.cursor_grid_position;
-        let grid_pos = ((cursor - preview_footprint.offset) / GRID_SIZE)
-            .round()
-            .as_ivec2();
-
-        self.cursor_grid_position = Some(grid_pos);
-        if self.cursor_grid_position != prev_grid_pos {
-            self.update_preview(grid, footprint_rot, preview_footprint);
-        }
-
-        let preview_translation = grid_pos.as_vec2() * GRID_SIZE + preview_footprint.offset;
-        self.preview_translation = Some(preview_translation);
+        self.update_preview(grid, preview_footprint);
     }
 
     pub fn move_cursor(
         &mut self,
         cursor_offset: Vec2,
         grid: &GridManager,
-        footprint_rot: RotationIncrement,
-        preview_footprint: &GridFootprint,
+        preview_footprint: RotatedFootprint,
     ) {
         let cursor = self.cursor_position.unwrap_or(Vec2::ZERO);
 
-        self.set_cursor(
-            cursor + cursor_offset,
-            grid,
-            footprint_rot,
-            preview_footprint,
-        );
+        self.set_cursor(cursor + cursor_offset, grid, preview_footprint);
     }
 
     pub fn cursor_grid_position(&self) -> Option<IVec2> {

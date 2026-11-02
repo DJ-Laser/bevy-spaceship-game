@@ -5,7 +5,7 @@ use bevy::{
 
 use crate::{
     editor::{EditorManager, preview::HasPreview},
-    grid::{GRID_SIZE, GridFootprint, PositionedFootprint, RotationIncrement, TileType},
+    grid::{GRID_SIZE, GridFootprint, RotatedFootprint, RotationIncrement, TileType},
 };
 
 #[derive(Default, Reflect, GizmoConfigGroup)]
@@ -19,11 +19,11 @@ pub fn setup_editor_gizmos(mut gizmo_config: ResMut<GizmoConfigStore>) {
 fn draw_footprint(
     gizmos: &mut Gizmos<EditorGridGizmos>,
     world_pos: Vec2,
-    footprint: PositionedFootprint,
+    footprint: RotatedFootprint,
 ) {
     let offsets = vec![ivec2(1, 0), ivec2(0, 1), ivec2(-1, 0), ivec2(0, -1)];
 
-    for grid in footprint.grids() {
+    for grid in footprint.with_position(IVec2::ZERO).grids() {
         let color = match grid.tile() {
             TileType::Hull => DARK_CYAN,
             TileType::Unobtrusive => GRAY,
@@ -70,7 +70,7 @@ pub fn draw_grid_boxes(
             draw_footprint(
                 &mut gizmos,
                 transform.translation().truncate(),
-                PositionedFootprint::new(footprint, IVec2::ZERO, *rotation),
+                RotatedFootprint::new(footprint, *rotation),
             );
         }
 
@@ -83,7 +83,7 @@ pub fn draw_grid_boxes(
                 draw_footprint(
                     &mut gizmos,
                     transform.translation().truncate(),
-                    PositionedFootprint::new(footprint, IVec2::ZERO, *rotation),
+                    RotatedFootprint::new(footprint, *rotation),
                 );
             },
         );

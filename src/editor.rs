@@ -11,7 +11,10 @@ use leafwing_input_manager::{action_state::ActionState, input_map::InputMap};
 use crate::{
     GameState,
     editor::preview::{EditorPreview, HasPreview},
-    grid::{GridFootprint, GridManager, PositionedFootprint, RotationIncrement, RotationStyle},
+    grid::{
+        GridFootprint, GridManager, PositionedFootprint, RotatedFootprint, RotationIncrement,
+        RotationStyle,
+    },
     input::{EditorAction, GameAction},
     player_ship,
     ship::{
@@ -144,12 +147,16 @@ fn update_cursor(
             };
 
             let relative_translation = transform.affine().inverse().transform_point3(hit_pos);
-            let Ok((rotation, preview)) = previews.get(editor.preview()) else {
+            let Ok((rotation, footprint)) = previews.get(editor.preview()) else {
                 editor.set_cursor_none();
                 return;
             };
 
-            editor.set_cursor(relative_translation.truncate(), grid, *rotation, preview);
+            editor.set_cursor(
+                relative_translation.truncate(),
+                grid,
+                RotatedFootprint::new(footprint, *rotation),
+            );
         });
 }
 
@@ -209,7 +216,7 @@ fn rotate_preview(
         }
 
         transform.rotation = Quat::from_rotation_z(rotation.rotation_radians());
-        editor.update_preview(grid, *rotation, footprint);
+        editor.update_preview(grid, RotatedFootprint::new(footprint, *rotation));
     });
 }
 
