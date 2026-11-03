@@ -55,6 +55,7 @@ impl Plugin for ShipEditorPlugin {
 #[derive(Component, Clone, FromTemplate)]
 #[require(GridManager, Visibility)]
 struct EditorManager {
+    #[entities]
     shop_entity: Entity,
 }
 
@@ -123,7 +124,7 @@ fn editor_scene() -> impl SceneList {
 }
 
 fn update_cursor(
-    mut move_events: MessageReader<PointerMove>,
+    mut move_events: PopulatedMessageReader<PointerMove>,
     mut editors: Query<(&mut HasPreview, &GridManager, &GlobalTransform), With<EditorManager>>,
     previews: Query<(&RotationIncrement, &GridFootprint), With<EditorPreview>>,
     nodes: Query<(), With<Node>>,

@@ -2,6 +2,7 @@ mod footprint;
 mod rotation;
 
 use bevy::{
+    ecs::entity::{EntityHashSet, MapEntities},
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
@@ -11,7 +12,14 @@ pub use rotation::{RotationIncrement, RotationStyle};
 
 pub const GRID_SIZE: f32 = 20.0;
 
-pub type FootprintValidateError = (HashSet<IVec2>, HashSet<Entity>);
+#[derive(Debug, Clone, Default)]
+pub struct FootprintValidateError(pub HashSet<IVec2>, pub EntityHashSet);
+
+impl MapEntities for FootprintValidateError {
+    fn map_entities<E: EntityMapper>(&mut self, entity_mapper: &mut E) {
+        self.1.map_entities(entity_mapper)
+    }
+}
 
 /// Defines the tile layers for the ship editor
 /// Generally, tiles need a hull tile in the same region to be placed, and can't overlap
@@ -43,6 +51,7 @@ impl TileType {
 }
 
 #[derive(Component, Default, Clone)]
+#[component(map_entities)]
 pub struct GridManager {
     tiles: HashMap<IVec2, HashMap<TileType, Entity>>,
 }
@@ -124,11 +133,11 @@ impl GridManager {
 
         for (tile, tile_pos) in footprint.tiles() {
             if let Err(tile_errors) = self.can_place_tile_at(tile_pos, tile) {
-                let (mut positions, mut errors): FootprintValidateError =
+                let FootprintValidateError(mut positions, mut errors) =
                     res.err().unwrap_or_default();
                 positions.insert(tile_pos);
                 errors.extend(tile_errors);
-                res = Err((positions, errors));
+                res = Err(FootprintValidateError(positions, errors));
             }
         }
 
@@ -138,6 +147,16 @@ impl GridManager {
     pub fn place_footprint(&mut self, footprint_id: Entity, footprint: PositionedFootprint) {
         for (tile, tile_pos) in footprint.tiles() {
             self.place_tile_at(tile_pos, tile, footprint_id);
+        }
+    }
+}
+
+impl MapEntities for GridManager {
+    fn map_entities<E: EntityMapper>(&mut self, entity_mapper: &mut E) {
+        for tile_set in self.tiles.values_mut() {
+            for entity in tile_set.values_mut() {
+                *entity = entity_mapper.get_mapped(*entity);
+            }
         }
     }
 }

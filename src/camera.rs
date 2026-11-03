@@ -22,6 +22,7 @@ impl Plugin for CameraPlugin {
 #[derive(SceneComponent, FromTemplate, Debug, Clone)]
 #[require(Camera2d)]
 pub struct MainCamera {
+    #[entities]
     #[template(built_in)]
     pub follow: Option<Entity>,
 }

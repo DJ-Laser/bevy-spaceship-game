@@ -5,7 +5,10 @@ use bevy::{
 
 use crate::{
     editor::{EditorManager, preview::HasPreview},
-    grid::{GRID_SIZE, GridFootprint, RotatedFootprint, RotationIncrement, TileType},
+    grid::{
+        FootprintValidateError, GRID_SIZE, GridFootprint, RotatedFootprint, RotationIncrement,
+        TileType,
+    },
 };
 
 #[derive(Default, Reflect, GizmoConfigGroup)]
@@ -74,7 +77,7 @@ pub fn draw_grid_boxes(
             );
         }
 
-        let Some((tiles, entities)) = editor.placement_errors() else {
+        let Some(FootprintValidateError(tiles, entities)) = editor.placement_errors() else {
             return;
         };
 

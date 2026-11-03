@@ -19,7 +19,9 @@ use crate::{
 #[scene(PartSelectionButtonProps)]
 #[require(Button, Hovered)]
 struct PartSelectionButton {
+    #[entities]
     editor: Entity,
+    #[entities]
     blueprint: Entity,
 }
 

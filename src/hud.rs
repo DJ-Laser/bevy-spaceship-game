@@ -38,15 +38,15 @@ pub fn player_hud(player_ship: EntityTemplate) -> impl Scene {
 
 #[derive(Component, FromTemplate, Debug, Clone)]
 #[require(Text)]
-struct EnergyHud(Entity);
+struct EnergyHud(#[entities] Entity);
 
 #[derive(Component, FromTemplate, Debug, Clone)]
 #[require(Text)]
-struct VelocityHud(Entity);
+struct VelocityHud(#[entities] Entity);
 
 #[derive(Component, FromTemplate, Debug, Clone)]
 #[require(Text)]
-struct HullDurabilityHud(Entity);
+struct HullDurabilityHud(#[entities] Entity);
 
 fn energy_hud_text(
     hud: Single<(&EnergyHud, &mut Text)>,

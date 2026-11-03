@@ -18,6 +18,8 @@ pub struct HasPreview {
     cursor_position: Option<Vec2>,
     cursor_grid_position: Option<IVec2>,
     preview_translation: Option<Vec2>,
+
+    #[entities]
     placement_errors: Option<FootprintValidateError>,
 }
 
