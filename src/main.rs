@@ -17,7 +17,9 @@ use crate::{
     hud::{HudPlugin, player_hud},
     input::PlayerInputPlugin,
     main_menu::MainMenuPlugin,
-    ship::{ShipPlugin, Spaceship, controller::DumbFireShipController, part_components::ShipHull},
+    ship::{
+        ShipPlugin, Spaceship, controller::DumbFireShipController, part_components::MaxDurability,
+    },
 };
 
 fn config_file(file: impl AsRef<Path>) -> PathBuf {
@@ -69,30 +71,31 @@ fn main() {
 }
 
 fn scene() -> impl SceneList {
-    let mut asteriods = Vec::new();
+    let asteriods: Vec<_> = (0..100)
+        .into_iter()
+        .map(|_| {
+            let radius = rand::random_range(10.0..30.0);
+            let hp = radius * 3.0;
 
-    for _ in 0..100 {
-        let radius = rand::random_range(10.0..30.0);
-        let hp = radius * 3.0;
+            let position = Vec2::new(
+                rand::random_range(-3000.0..3000.0),
+                rand::random_range(-3000.0..3000.0),
+            );
 
-        let position = Vec2::new(
-            rand::random_range(-3000.0..3000.0),
-            rand::random_range(-3000.0..3000.0),
-        );
+            let scene = bsn! {
+                DespawnOnExit<GameState>(GameState::Game)
+                @asteroid(radius, hp)
+                Position(position)
+            };
 
-        let scene = bsn! {
-            DespawnOnExit<GameState>(GameState::Game)
-            @asteroid(radius, hp)
-            Position(position)
-        };
-
-        asteriods.push(scene);
-    }
+            scene
+        })
+        .collect();
 
     bsn_list! {
         DespawnOnExit<GameState>(GameState::Game)
         #EnemyShip
-        DumbFireShipController
+        //DumbFireShipController
         @enemy_ship()
         --
         {asteriods}
@@ -106,9 +109,8 @@ fn asteroid(radius: f32, hp: f32) -> impl Scene {
     let shape = Circle::new(radius);
 
     bsn! {
-        ShipHull {
-            max_hp: hp,
-        }
+        #Asteroid
+        MaxDurability(hp)
 
         Transform::from_xyz(0.0, 0.0, 0.0)
         Mesh2d(asset_value(shape))
@@ -124,10 +126,6 @@ fn player_ship() -> impl Scene {
     bsn! {
         Transform::from_xyz(0.0, 0.0, 0.0)
         Spaceship
-        ShipHull {
-            max_hp: 1000.0,
-        }
-
 
         RigidBody::Dynamic
     }
@@ -144,18 +142,17 @@ fn enemy_ship() -> impl Scene {
 
     bsn! {
         Spaceship
-        ShipHull {
-            max_hp: 1000.0,
-        }
 
         Transform::from_xyz(150.0, 300.0, 0.0)
-        Mesh2d(asset_value(ship_shape))
-        MeshMaterial2d<ColorMaterial>(asset_value(Color::srgb(1.0, 0.0, 0.0)))
-
-        RigidBody::Dynamic
-        Collider::from(ship_shape)
 
         Children [
+            MaxDurability(500.0)
+            Mesh2d(asset_value(ship_shape))
+            MeshMaterial2d<ColorMaterial>(asset_value(Color::srgb(1.0, 0.0, 0.0)))
+
+            RigidBody::Dynamic
+            Collider::from(ship_shape)
+            --
             @reactor_mk5()
             --
             @battery_100h4()

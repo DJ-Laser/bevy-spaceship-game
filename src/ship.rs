@@ -17,7 +17,7 @@ impl Plugin for ShipPlugin {
             (
                 (
                     power::clear_power_demands,
-                    weapons::init_ship_hull,
+                    durability::init_part_durability,
                     (
                         controller::player::control_ship,
                         controller::dumb_fire::control_ship,
@@ -37,7 +37,7 @@ impl Plugin for ShipPlugin {
                     engines::fire_engines::<TurningEngine>,
                     weapons::fire_weapons,
                 ),
-                weapons::remove_broken_hulls,
+                durability::remove_broken_parts,
             )
                 .chain(),
         );

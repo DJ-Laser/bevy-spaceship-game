@@ -1,12 +1,14 @@
+pub(super) mod durability;
 pub(super) mod engines;
 pub(super) mod power;
 pub(super) mod weapons;
 
 use bevy::prelude::*;
 
+pub use durability::{Durability, MaxDurability};
 pub use engines::{ForwardEngine, ReverseEngine, TurningEngine};
 pub use power::{PowerSource, PowerStorage};
-pub use weapons::{ProjectileSpawnPoint, ProjectileWeapon, ShipHull};
+pub use weapons::{ProjectileSpawnPoint, ProjectileWeapon};
 
 /// A marker component indicating that this part is inactive and should not participate in the ship's update cycle.
 #[derive(Component, Debug, Default, Clone)]

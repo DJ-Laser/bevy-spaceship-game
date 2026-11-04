@@ -3,7 +3,7 @@ use bevy::{ecs::template::EntityTemplate, prelude::*};
 
 use crate::ship::{
     Spaceship,
-    part_components::{InactivePart, PowerStorage, ShipHull},
+    part_components::{Durability, InactivePart, MaxDurability, PowerStorage},
 };
 
 pub struct HudPlugin;
@@ -90,26 +90,24 @@ fn velocity_hud_text(
 
 fn hull_durability_hud_text(
     hud: Single<(&HullDurabilityHud, &mut Text)>,
-    spaceships: Query<(&Children, Option<&ShipHull>), With<Spaceship>>,
-    hulls: Query<&ShipHull, Without<InactivePart>>,
+    spaceships: Query<&Children, With<Spaceship>>,
+    hulls: Query<(&MaxDurability, &Durability), Without<InactivePart>>,
 ) {
     let (ship_id, mut text) = hud.into_inner();
-    let mut total_max_hp = 0.0;
-    let mut total_hp = 0.0;
-
-    let Ok((children, hull)) = spaceships.get(ship_id.0) else {
+    let Ok(children) = spaceships.get(ship_id.0) else {
         return;
     };
 
-    if let Some(hull) = hull {
-        total_max_hp += hull.max_hp;
-        total_hp += hull.current_hp;
-    }
+    let mut total_max_hp = 0.0;
+    let mut total_hp = 0.0;
 
-    hulls.iter_many(children).matched().for_each(|hull| {
-        total_max_hp += hull.max_hp;
-        total_hp += hull.current_hp;
-    });
+    hulls
+        .iter_many(children)
+        .matched()
+        .for_each(|(durability, max)| {
+            total_max_hp += max.0;
+            total_hp += durability.0;
+        });
 
     let percentage = (total_hp / total_max_hp) * 100.0;
     text.0 = format!("Hull Durability: {percentage:.0}%");

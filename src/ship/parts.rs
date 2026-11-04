@@ -34,6 +34,7 @@ pub fn reactor_mk5() -> impl Scene {
       PartCategory::Power
       PowerSource::new(600.0)
       GridFootprint::builder().rect(TileType::Interior, ivec2(-1, -1), ivec2(1, 1)).build()
+      MaxDurability(100.0)
     }
 }
 
@@ -50,6 +51,7 @@ pub fn battery_100h4() -> impl Scene {
         .rect(TileType::Interior, ivec2(0, 0), ivec2(0, 1))
         .build_offset(vec2(0.0, 10.0))
       RotationStyle::Rotate90Symmetric
+      MaxDurability(50.0)
     }
 }
 
@@ -69,6 +71,7 @@ pub fn plasma_cannon() -> impl Scene {
             .rect(TileType::Exclusive, ivec2(0, 3), ivec2(0, 13))
             .build()
         RotationStyle::Rotate90
+        MaxDurability(200.0)
 
         Children [
             Transform::from_translation(vec3(0.0, 30.0, 0.0))
@@ -91,6 +94,7 @@ pub fn hull_panel_3x3() -> impl Scene {
         MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(BEIGE)))
         PartCategory::Defense
         GridFootprint::builder().rect(TileType::Hull, ivec2(-1, -1), ivec2(1, 1)).build()
+        MaxDurability(250.0)
     }
 }
 
@@ -109,6 +113,7 @@ pub fn engine_xn_2000() -> impl Scene {
         .rect(TileType::Exclusive, ivec2(0, 0), ivec2(1, 0))
         .rect(TileType::Exclusive, ivec2(0, -1), ivec2(1, -5))
         .build_offset(vec2(10.0, -2.5))
+        MaxDurability(150.0)
     }
 }
 
@@ -124,6 +129,7 @@ pub fn engine_rh_500() -> impl Scene {
             power_draw: 200.0
         }
         GridFootprint::builder().tile(TileType::Exclusive, ivec2(0, 0)).build()
+        MaxDurability(150.0)
     }
 }
 
@@ -140,5 +146,6 @@ pub fn rcs_tl_150() -> impl Scene {
         }
         GridFootprint::builder().tile(TileType::Exclusive, ivec2(0, 0)).build()
         RotationStyle::Rotate90
+        MaxDurability(150.0)
     }
 }

@@ -6,7 +6,7 @@ use leafwing_input_manager::{Actionlike, action_state::ActionState};
 
 use crate::ship::{
     Spaceship,
-    part_components::{InactivePart, power::PowerConsumer},
+    part_components::{Durability, InactivePart, power::PowerConsumer},
 };
 
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect)]
@@ -95,6 +95,7 @@ pub fn fire_weapons(
                 let circle = Circle::new(2.5);
                 commands
                     .queue_spawn_scene(bsn! {
+                        #Projectile
                         Position({spawn_point.translation().truncate()})
                         LinearVelocity(velocity)
                         RigidBody::Kinematic
@@ -114,28 +115,9 @@ pub fn fire_weapons(
     );
 }
 
-#[derive(Component, Default, Clone)]
-pub struct ShipHull {
-    pub max_hp: f32,
-    pub current_hp: f32,
-}
-
-pub fn init_ship_hull(mut hulls: Query<&mut ShipHull, Added<ShipHull>>) {
-    hulls.iter_mut().for_each(|mut hull| {
-        hull.current_hp = hull.max_hp;
-    });
-}
-
-pub fn remove_broken_hulls(mut commands: Commands, hulls: Query<(Entity, &ShipHull)>) {
-    hulls.iter().for_each(|(entity, hull)| {
-        if hull.current_hp <= 0.0 {
-            commands.entity(entity).despawn();
-        }
-    });
-}
-
 #[derive(Component, Clone, FromTemplate)]
 pub struct Projectile {
+    #[entities]
     owner: Entity,
     damage: f32,
 }
@@ -144,24 +126,48 @@ fn apply_projectile_damage(
     event: On<CollisionStart>,
     mut commands: Commands,
     projectiles: Query<(Entity, &Projectile)>,
-    mut hulls: Query<(Entity, Option<&ChildOf>, &mut ShipHull)>,
+    children: Query<&ChildOf>,
+    names: Query<&Name>,
+    mut parts: Query<(Entity, &mut Durability)>,
 ) {
     let Ok((projectile_id, projectile)) = projectiles.get(event.collider1) else {
         return;
     };
 
-    let Ok((hull_id, p, mut hull)) = hulls.get_mut(event.collider2) else {
+    let name = names.get(event.collider2).ok();
+    if let Some(name) = name {
+        println!("hit {name}");
+    } else {
+        println!("hit unnamed");
+    }
+
+    let Some((part_id, mut durability)) = children
+        .iter_ancestors(event.collider2)
+        .find(|ancestor| {
+            let name = names.get(*ancestor).ok();
+            println!(
+                "Ancestor {}, {}",
+                name.map_or("None".into(), |name| name.to_string()),
+                parts.contains(*ancestor)
+            );
+
+            parts.contains(*ancestor)
+        })
+        .and_then(|part_id| parts.get_mut(part_id).ok())
+    else {
+        println!("Not a part with durability");
         return;
     };
 
-    if projectile.owner == hull_id {
+    if projectile.owner == part_id {
         return;
-    } else if let Some(p) = p
+    } else if let Ok(p) = children.get(part_id)
         && projectile.owner == p.get()
     {
         return;
     }
 
-    hull.current_hp -= projectile.damage;
-    commands.entity(projectile_id).despawn();
+    println!("Damaging {name:?}");
+    durability.0 -= projectile.damage;
+    commands.entity(projectile_id).try_despawn();
 }
