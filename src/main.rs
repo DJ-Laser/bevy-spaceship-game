@@ -110,13 +110,13 @@ fn asteroid(radius: f32, hp: f32) -> impl Scene {
 
     bsn! {
         #Asteroid
-        MaxDurability(hp)
+        RigidBody::Dynamic
 
         Transform::from_xyz(0.0, 0.0, 0.0)
         Mesh2d(asset_value(shape))
         MeshMaterial2d<ColorMaterial>(asset_value(Color::srgb(0.75, 0.75, 0.75)))
 
-        RigidBody::Dynamic
+        MaxDurability(hp)
         Collider::from(shape)
         ColliderDensity(1.0)
     }
@@ -142,15 +142,16 @@ fn enemy_ship() -> impl Scene {
 
     bsn! {
         Spaceship
+        RigidBody::Dynamic
 
         Transform::from_xyz(150.0, 300.0, 0.0)
 
         Children [
-            MaxDurability(500.0)
+            #EnemyShipHull
             Mesh2d(asset_value(ship_shape))
             MeshMaterial2d<ColorMaterial>(asset_value(Color::srgb(1.0, 0.0, 0.0)))
 
-            RigidBody::Dynamic
+            MaxDurability(500.0)
             Collider::from(ship_shape)
             --
             @reactor_mk5()

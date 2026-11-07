@@ -1,4 +1,4 @@
-use std::f32::consts::FRAC_PI_2;
+use std::{f32::consts::FRAC_PI_2, iter};
 
 use avian2d::prelude::*;
 use bevy::{ecs::relationship::Relationship as _, prelude::*};
@@ -127,35 +127,18 @@ fn apply_projectile_damage(
     mut commands: Commands,
     projectiles: Query<(Entity, &Projectile)>,
     children: Query<&ChildOf>,
-    names: Query<&Name>,
     mut parts: Query<(Entity, &mut Durability)>,
 ) {
     let Ok((projectile_id, projectile)) = projectiles.get(event.collider1) else {
         return;
     };
 
-    let name = names.get(event.collider2).ok();
-    if let Some(name) = name {
-        println!("hit {name}");
-    } else {
-        println!("hit unnamed");
-    }
-
-    let Some((part_id, mut durability)) = children
-        .iter_ancestors(event.collider2)
-        .find(|ancestor| {
-            let name = names.get(*ancestor).ok();
-            println!(
-                "Ancestor {}, {}",
-                name.map_or("None".into(), |name| name.to_string()),
-                parts.contains(*ancestor)
-            );
-
-            parts.contains(*ancestor)
-        })
+    let hit_entity = event.collider2;
+    let Some((part_id, mut durability)) = iter::once(hit_entity)
+        .chain(children.iter_ancestors(hit_entity))
+        .find(|e| parts.contains(*e))
         .and_then(|part_id| parts.get_mut(part_id).ok())
     else {
-        println!("Not a part with durability");
         return;
     };
 
@@ -167,7 +150,6 @@ fn apply_projectile_damage(
         return;
     }
 
-    println!("Damaging {name:?}");
     durability.0 -= projectile.damage;
     commands.entity(projectile_id).try_despawn();
 }
