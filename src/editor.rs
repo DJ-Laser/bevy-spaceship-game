@@ -66,7 +66,7 @@ struct ShopCatalog;
 fn editor_scene() -> impl SceneList {
     bsn_list! {
         @crate::camera::MainCamera {
-            follow: Option::None
+            follow: Option::Some(#PlayerShip)
         }
         --
         DespawnOnExit<GameState>(GameState::ShipEditor)

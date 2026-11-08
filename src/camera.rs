@@ -5,6 +5,9 @@ use bevy::{
     shader::ShaderRef,
     sprite_render::{Material2d, Material2dPlugin},
 };
+use leafwing_input_manager::action_state::ActionState;
+
+use crate::{GameState, input::EditorAction};
 
 pub struct CameraPlugin;
 
@@ -14,7 +17,12 @@ impl Plugin for CameraPlugin {
         app.add_systems(Update, update_material);
         app.add_systems(
             PostUpdate,
-            (update_camera, update_starfield).after(TransformSystems::Propagate),
+            (
+                update_camera_game_state.run_if(in_state(GameState::Game)),
+                update_camera_editor_state.run_if(in_state(GameState::ShipEditor)),
+                update_starfield,
+            )
+                .after(TransformSystems::Propagate),
         );
     }
 }
@@ -41,27 +49,52 @@ impl MainCamera {
     }
 }
 
-fn update_camera(
+fn update_camera_game_state(
     mut cameras: Query<(&MainCamera, &mut Transform)>,
-    entities: Query<(&GlobalTransform, Option<&ComputedCenterOfMass>), Without<MainCamera>>,
+    targets: Query<(&GlobalTransform, Option<&ComputedCenterOfMass>), Without<MainCamera>>,
 ) {
     cameras.iter_mut().for_each(|(camera, mut transform)| {
         let Some(follow_target) = camera.follow else {
             return;
         };
 
-        let Ok((target_transform, center_of_mass)) = entities.get(follow_target) else {
+        let Ok((target_transform, center_of_mass)) = targets.get(follow_target) else {
             return;
         };
 
         let mut center = target_transform.translation().truncate();
 
         if let Some(center_of_mass) = center_of_mass {
-            center -= center_of_mass.0;
+            center += center_of_mass
+                .0
+                .rotate_angle(target_transform.rotation().to_euler(EulerRot::ZXY).0);
         }
 
         transform.translation.x = center.x;
         transform.translation.y = center.y;
+    });
+}
+
+fn update_camera_editor_state(
+    time: Res<Time>,
+    mut cameras: Query<(&MainCamera, &mut Transform)>,
+    targets: Query<&ActionState<EditorAction>, Without<MainCamera>>,
+) {
+    cameras.iter_mut().for_each(|(camera, mut transform)| {
+        let Some(follow_target) = camera.follow else {
+            return;
+        };
+
+        let Ok(actions) = targets.get(follow_target) else {
+            return;
+        };
+
+        let movement_speed = 300.0;
+        let move_direction = actions.axis_pair(&EditorAction::MoveCamera);
+        let movement_delta = move_direction * movement_speed * time.delta_secs();
+
+        transform.translation.x += movement_delta.x;
+        transform.translation.y += movement_delta.y;
     });
 }
 
