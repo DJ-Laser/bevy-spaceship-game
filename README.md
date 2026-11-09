@@ -6,7 +6,7 @@ A work in progress 2d spaceship simulation game, inspired by games like endless 
 
 I plan to add many different parts you can use to build your ships, and ship damage on an individual system level.
 
-Play here: https://github.com/DJ-Laser/bevy-spaceship-game
+Play here: [https://github.com/DJ-Laser/bevy-spaceship-game](https://dj-laser.github.io/bevy-spaceship-game/)
 
 ### Controls:
 
