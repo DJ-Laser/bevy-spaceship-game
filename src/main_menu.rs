@@ -64,33 +64,33 @@ const PRESSED_BUTTON: Color = Color::srgb(0.35, 0.75, 0.35);
 
 fn menu_button(icon: &'static str, text: &'static str) -> impl Scene {
     bsn! {
-      Button
-      ActivateOnPress
-      Hovered
-      Node {
-        width: px(300),
-        height: px(65),
-        margin: UiRect::all(px(20)),
-        justify_content: JustifyContent::Center,
-        align_items: AlignItems::Center,
-      }
-      BackgroundColor(NORMAL_BUTTON)
-      Children [
-        ImageNode {
-          image: icon,
-        }
+        Button
+        ActivateOnPress
+        Hovered
         Node {
-            width: px(50),
-            position_type: PositionType::Absolute,
-            left: px(10),
+            width: px(300),
+            height: px(65),
+            margin: UiRect::all(px(20)),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
         }
-        --
-        Text::new(text)
-        TextFont {
-          font_size: FontSize::Px(33.0),
-        }
-        TextColor(WHITE)
-      ]
+        BackgroundColor(NORMAL_BUTTON)
+        Children [
+            ImageNode {
+                image: icon,
+            }
+            Node {
+                width: px(50),
+                position_type: PositionType::Absolute,
+                left: px(10),
+            }
+            --
+            Text::new(text)
+            TextFont {
+                font_size: FontSize::Px(33.0),
+            }
+            TextColor(WHITE)
+        ]
     }
 }
 
@@ -109,46 +109,45 @@ fn button_style(mut buttons: Query<(&mut BackgroundColor, &Hovered, Has<Pressed>
 
 fn main_menu() -> impl Scene {
     bsn! {
-      DespawnOnExit<MenuState>(MenuState::Main)
-      Node {
-        align_items: AlignItems::Center,
-        justify_content: JustifyContent::Center,
-        width: percent(100),
-        height: percent(100),
-      }
-
-      Children [
+        DespawnOnExit<MenuState>(MenuState::Main)
         Node {
-          flex_direction: FlexDirection::Column,
-          align_items: AlignItems::Center,
-
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            width: percent(100),
+            height: percent(100),
         }
-        BackgroundColor(CYAN_950)
+
         Children [
-          Text::new("Untitled Space Game")
-          TextFont {
-            font_size: FontSize::Px(67.0),
-          }
-          TextColor(WHITE)
-          Node {
-              margin: UiRect::all(px(50)),
-          }
-          --
-          //@menu_button("textures/icons/right.png", "Play")
-          //on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>| {
-          //  game_state.set(GameState::Game);
-          //})
-          //--
-          @menu_button("textures/icons/right.png", "Ship Editor")
-          on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>| {
-            game_state.set(GameState::ShipEditor);
-          })
-          --
-          @menu_button("textures/icons/exitRight.png", "Quit")
-          on(|_: On<Activate>, mut exit: MessageWriter<AppExit>| {
-            exit.write(AppExit::Success);
-          })
+            Node {
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+            }
+            BackgroundColor(CYAN_950)
+            Children [
+            Text::new("Untitled Space Game")
+            TextFont {
+                font_size: FontSize::Px(67.0),
+            }
+            TextColor(WHITE)
+            Node {
+                margin: UiRect::all(px(50)),
+            }
+            --
+            //@menu_button("textures/icons/right.png", "Play")
+            //on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>| {
+            //    game_state.set(GameState::Game);
+            //})
+            //--
+            @menu_button("textures/icons/right.png", "Ship Editor")
+            on(|_: On<Activate>, mut game_state: ResMut<NextState<GameState>>| {
+                game_state.set(GameState::ShipEditor);
+            })
+            --
+            @menu_button("textures/icons/exitRight.png", "Quit")
+            on(|_: On<Activate>, mut exit: MessageWriter<AppExit>| {
+                exit.write(AppExit::Success);
+            })
+            ]
         ]
-      ]
     }
 }

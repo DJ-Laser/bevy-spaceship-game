@@ -33,22 +33,22 @@ struct PartSelectionButtonProps {
 impl PartSelectionButton {
     fn scene(props: PartSelectionButtonProps) -> impl Scene {
         bsn! {
-          Node {
-              width: Val::Px(180.0),
-              height: Val::Px(32.0),
-              justify_content: JustifyContent::Center,
-              align_items: AlignItems::Center,
-          }
-          BackgroundColor(Color::srgb(0.22, 0.22, 0.26))
-
-          Children [
-            Text::new(props.text)
-            TextFont {
-                font_size: FontSize::Px(12.0),
+            Node {
+                width: Val::Px(180.0),
+                height: Val::Px(32.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
             }
-          ]
+            BackgroundColor(Color::srgb(0.22, 0.22, 0.26))
 
-          on(button_on_activate)
+            Children [
+                Text::new(props.text)
+                TextFont {
+                    font_size: FontSize::Px(12.0),
+                }
+            ]
+
+            on(button_on_activate)
         }
     }
 }
@@ -91,34 +91,34 @@ pub fn populate_shop_ui(
         .matched()
         .map(|(id, name, cost)| {
             bsn! {
-              @PartSelectionButton {
-                @text: {format!("{} (${})", name, cost.0)},
-                blueprint: id,
-                editor,
-              }
+                @PartSelectionButton {
+                    @text: {format!("{} (${})", name, cost.0)},
+                    blueprint: id,
+                    editor,
+                }
             }
         })
         .collect();
 
     commands.spawn_scene(bsn! {
-      DespawnOnExit<GameState>(GameState::ShipEditor)
-      Node {
-          position_type: PositionType::Absolute,
-          left: Val::Px(12.0),
-          top: Val::Px(12.0),
-          flex_direction: FlexDirection::Column,
-          row_gap: Val::Px(6.0),
-          padding: UiRect::all(Val::Px(10.0)),
-      }
-      BackgroundColor(Color::srgb(0.14, 0.14, 0.18))
-      Children [
-        Text::new("Available Parts")
-        TextFont {
-            font_size: FontSize::Px(15.0),
+        DespawnOnExit<GameState>(GameState::ShipEditor)
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(12.0),
+            top: Val::Px(12.0),
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(6.0),
+            padding: UiRect::all(Val::Px(10.0)),
         }
-        --
-        {buttons}
-      ]
+        BackgroundColor(Color::srgb(0.14, 0.14, 0.18))
+        Children [
+            Text::new("Available Parts")
+            TextFont {
+                font_size: FontSize::Px(15.0),
+            }
+            --
+            {buttons}
+        ]
     });
 }
 

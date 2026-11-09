@@ -26,32 +26,32 @@ pub struct Cost(pub i64);
 
 pub fn reactor_mk5() -> impl Scene {
     bsn! {
-      Name("Reactor MK5")
-      Cost(15_000)
-      Mesh2d(asset_value(Rectangle::new(50.0, 50.0)))
-      MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(GREEN)))
-      Collider::from(Rectangle::new(50.0, 50.0))
-      PartCategory::Power
-      PowerSource::new(600.0)
-      GridFootprint::builder().rect(TileType::Interior, ivec2(-1, -1), ivec2(1, 1)).build()
-      MaxDurability(100.0)
+        Name("Reactor MK5")
+        Cost(15_000)
+        Mesh2d(asset_value(Rectangle::new(50.0, 50.0)))
+        MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(GREEN)))
+        Collider::from(Rectangle::new(50.0, 50.0))
+        PartCategory::Power
+        PowerSource::new(600.0)
+        GridFootprint::builder().rect(TileType::Interior, ivec2(-1, -1), ivec2(1, 1)).build()
+        MaxDurability(100.0)
     }
 }
 
 pub fn battery_100h4() -> impl Scene {
     bsn! {
-      Name("Battery 100H4")
-      Cost(2_000)
-      PartCategory::Power
-      PowerStorage::new(1000.0)
-      Mesh2d(asset_value(Rectangle::new(20.0, 40.0)))
-      Collider::from(Rectangle::new(20.0, 40.0))
-      MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(YELLOW)))
-      GridFootprint::builder()
-        .rect(TileType::Interior, ivec2(0, 0), ivec2(0, 1))
-        .build_offset(vec2(0.0, 10.0))
-      RotationStyle::Rotate90Symmetric
-      MaxDurability(50.0)
+        Name("Battery 100H4")
+        Cost(2_000)
+        PartCategory::Power
+        PowerStorage::new(1000.0)
+        Mesh2d(asset_value(Rectangle::new(20.0, 40.0)))
+        Collider::from(Rectangle::new(20.0, 40.0))
+        MeshMaterial2d<ColorMaterial>(asset_value(Into::<Color>::into(YELLOW)))
+        GridFootprint::builder()
+            .rect(TileType::Interior, ivec2(0, 0), ivec2(0, 1))
+            .build_offset(vec2(0.0, 10.0))
+        RotationStyle::Rotate90Symmetric
+        MaxDurability(50.0)
     }
 }
 

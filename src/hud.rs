@@ -19,20 +19,20 @@ impl Plugin for HudPlugin {
 
 pub fn player_hud(player_ship: EntityTemplate) -> impl Scene {
     bsn! {
-      #Hud
-      Node {
-          position_type: PositionType::Absolute,
-          flex_direction: FlexDirection::Column,
-          bottom: px(5),
-          left: px(15),
-      }
-      Children [
-          EnergyHud(player_ship)
-          --
-          VelocityHud(player_ship)
-          --
-          HullDurabilityHud(player_ship)
-      ]
+        #Hud
+        Node {
+            position_type: PositionType::Absolute,
+            flex_direction: FlexDirection::Column,
+            bottom: px(5),
+            left: px(15),
+        }
+        Children [
+            EnergyHud(player_ship)
+            --
+            VelocityHud(player_ship)
+            --
+            HullDurabilityHud(player_ship)
+        ]
     }
 }
 
