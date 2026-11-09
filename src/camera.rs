@@ -1,55 +1,69 @@
-use avian2d::dynamics::rigid_body::mass_properties::components::ComputedCenterOfMass;
-use bevy::{
-    prelude::*,
-    render::render_resource::AsBindGroup,
-    shader::ShaderRef,
-    sprite_render::{Material2d, Material2dPlugin},
-};
-use leafwing_input_manager::action_state::ActionState;
+mod editor_controls;
+mod stars;
 
-use crate::{GameState, input::EditorAction};
+use avian2d::dynamics::rigid_body::mass_properties::components::ComputedCenterOfMass;
+use bevy::{prelude::*, sprite_render::Material2dPlugin};
+use leafwing_input_manager::{action_state::ActionState, input_map::InputMap};
+
+use crate::{GameState, camera::stars::StarfieldMaterial, input::ViewAction};
 
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<StarfieldMaterial>::default());
-        app.add_systems(Update, update_material);
+        app.add_systems(Update, stars::update_material);
         app.add_systems(
             PostUpdate,
             (
-                update_camera_game_state.run_if(in_state(GameState::Game)),
-                update_camera_editor_state.run_if(in_state(GameState::ShipEditor)),
-                update_starfield,
+                (
+                    camera_follow_target.run_if(in_state(GameState::Game)),
+                    (
+                        editor_controls::move_editor_camera,
+                        editor_controls::activate_mouse_pan,
+                    )
+                        .run_if(in_state(GameState::ShipEditor)),
+                    zoom_camera,
+                ),
+                stars::update_starfield,
             )
+                .chain()
                 .after(TransformSystems::Propagate),
         );
     }
 }
 
+pub fn camera_backdrop() -> impl Scene {
+    bsn! {
+        Children [
+            #Starfield
+            Transform::from_xyz(0.0, 0.0, -100.0)
+            Mesh2d(asset_value(Rectangle::default()))
+            MeshMaterial2d<StarfieldMaterial>(asset_value(StarfieldMaterial::default()))
+        ]
+    }
+}
+
 #[derive(SceneComponent, FromTemplate, Debug, Clone)]
-#[require(Camera2d)]
+#[require(Camera2d, InputMap<ViewAction>, editor_controls::HandleMousePanObserver)]
 pub struct MainCamera {
     #[entities]
     #[template(built_in)]
     pub follow: Option<Entity>,
+    pub min_zoom: f32,
+    pub max_zoom: f32,
 }
 
 impl MainCamera {
     fn scene() -> impl Scene {
         bsn! {
             #MainCamera
-            Children [
-                #Starfield
-                Transform::from_xyz(0.0, 0.0, -100.0)
-                Mesh2d(asset_value(Rectangle::default()))
-                MeshMaterial2d<StarfieldMaterial>(asset_value(StarfieldMaterial::default()))
-            ]
+            @camera_backdrop()
         }
     }
 }
 
-fn update_camera_game_state(
+fn camera_follow_target(
     mut cameras: Query<(&MainCamera, &mut Transform)>,
     targets: Query<(&GlobalTransform, Option<&ComputedCenterOfMass>), Without<MainCamera>>,
 ) {
@@ -75,68 +89,20 @@ fn update_camera_game_state(
     });
 }
 
-fn update_camera_editor_state(
-    time: Res<Time>,
-    mut cameras: Query<(&MainCamera, &mut Transform)>,
-    targets: Query<&ActionState<EditorAction>, Without<MainCamera>>,
-) {
-    cameras.iter_mut().for_each(|(camera, mut transform)| {
-        let Some(follow_target) = camera.follow else {
-            return;
-        };
+fn zoom_camera(mut cameras: Query<(&ActionState<ViewAction>, &mut Projection, &MainCamera)>) {
+    cameras
+        .iter_mut()
+        .for_each(|(actions, mut projection, camera_settings)| {
+            let Projection::Orthographic(ref mut projection) = *projection else {
+                return;
+            };
 
-        let Ok(actions) = targets.get(follow_target) else {
-            return;
-        };
+            let zoom_rate: f32 = 0.05;
+            let zoom_amount = actions.value(&ViewAction::ZoomCamera);
 
-        let movement_speed = 300.0;
-        let move_direction = actions.axis_pair(&EditorAction::MoveCamera);
-        let movement_delta = move_direction * movement_speed * time.delta_secs();
-
-        transform.translation.x += movement_delta.x;
-        transform.translation.y += movement_delta.y;
-    });
-}
-
-fn update_starfield(
-    cameras: Query<(&Children, &Camera, &Projection)>,
-    mut starfields: Query<&mut Transform, With<MeshMaterial2d<StarfieldMaterial>>>,
-) {
-    cameras.iter().for_each(|(children, camera, projection)| {
-        let Some(logical_size) = camera.logical_viewport_size() else {
-            return;
-        };
-
-        let Projection::Orthographic(ortho_proj) = projection else {
-            return;
-        };
-
-        let view_size = logical_size * ortho_proj.scale;
-
-        let mut iter = starfields.iter_many_mut(children).matched();
-        while let Some(mut transform) = iter.fetch_next() {
-            // Scale assuming a default 1x1 quad mesh unit size
-            transform.scale.x = view_size.x;
-            transform.scale.y = view_size.y;
-        }
-    });
-}
-
-#[derive(Asset, TypePath, AsBindGroup, Clone, Default)]
-struct StarfieldMaterial {
-    // On webgl non-16 byte allignment causes an error
-    #[uniform(0)]
-    time: Vec4,
-}
-
-impl Material2d for StarfieldMaterial {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/starfield.wesl".into()
-    }
-}
-
-fn update_material(time: Res<Time>, mut materials: ResMut<Assets<StarfieldMaterial>>) {
-    materials.iter_mut().for_each(|(_, material)| {
-        material.time = Vec4::new(time.elapsed_secs(), 0.0, 0.0, 0.0);
-    });
+            projection.scale *= 1.0 - zoom_amount * zoom_rate;
+            projection.scale = projection
+                .scale
+                .clamp(camera_settings.min_zoom, camera_settings.max_zoom)
+        });
 }

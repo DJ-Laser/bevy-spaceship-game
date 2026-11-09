@@ -9,7 +9,7 @@ use bevy::{
     ui_widgets::{Activate, ActivateOnPress, Button},
 };
 
-use crate::GameState;
+use crate::{GameState, camera::camera_backdrop};
 
 pub struct MainMenuPlugin;
 
@@ -51,7 +51,8 @@ fn background() -> impl SceneList {
 
     bsn_list! {
       DespawnOnExit<GameState>(GameState::MainMenu)
-      @crate::camera::MainCamera
+      Camera2d
+      @camera_backdrop()
       Transform::from_translation(camera_pos)
     }
 }

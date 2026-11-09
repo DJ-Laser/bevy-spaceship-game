@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use leafwing_input_manager::action_state::ActionState;
 
 use crate::{
-    input::GameAction,
+    input::PlayerShipAction,
     ship::part_components::{ProjectileWeapon, engines::EngineAction, weapons::WeaponAction},
     ship::{
         Spaceship,
@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[derive(Component, Default, Clone)]
-#[require(ActionState<GameAction>)]
+#[require(ActionState<PlayerShipAction>)]
 pub struct PlayerShipController;
 
 pub fn control_ship(
@@ -21,7 +21,7 @@ pub fn control_ship(
     ships: Query<
         (
             &Children,
-            &ActionState<GameAction>,
+            &ActionState<PlayerShipAction>,
             Forces,
             &ComputedAngularInertia,
         ),
@@ -38,7 +38,7 @@ pub fn control_ship(
 
             let goal_angular_velocity = 0.1
                 * (engine_totals.turn_torque * angular_inertia.inverse())
-                * player_actions.clamped_value(&GameAction::Turn);
+                * player_actions.clamped_value(&PlayerShipAction::Turn);
 
             let torque_needed = angular_inertia.value()
                 * (-goal_angular_velocity - forces.angular_velocity())
@@ -48,7 +48,7 @@ pub fn control_ship(
             while let Some(mut engine_actions) = iter.fetch_next() {
                 engine_actions.set_value(
                     &EngineAction::Thrust,
-                    player_actions.value(&GameAction::Thrust),
+                    player_actions.value(&PlayerShipAction::Thrust),
                 );
 
                 engine_actions.set_value(
@@ -61,7 +61,7 @@ pub fn control_ship(
             while let Some(mut weapon_actions) = iter.fetch_next() {
                 weapon_actions.set_button_value(
                     &WeaponAction::Fire,
-                    player_actions.button_value(&GameAction::FirePrimary),
+                    player_actions.button_value(&PlayerShipAction::FirePrimary),
                 );
             }
         });

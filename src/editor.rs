@@ -15,7 +15,7 @@ use crate::{
         GridFootprint, GridManager, PositionedFootprint, RotatedFootprint, RotationIncrement,
         RotationStyle,
     },
-    input::{EditorAction, GameAction},
+    input::{EditorAction, PlayerShipAction},
     player_ship,
     ship::{
         controller::PlayerShipController,
@@ -42,9 +42,13 @@ impl Plugin for ShipEditorPlugin {
                 place_part,
                 ui::update_buttons,
                 rotate_preview,
-                gizmos::draw_grid_boxes,
             )
                 .run_if(in_state(GameState::ShipEditor)),
+        );
+
+        app.add_systems(
+            PostUpdate,
+            gizmos::draw_grid_boxes.run_if(in_state(GameState::ShipEditor)),
         );
 
         app.init_gizmo_group::<gizmos::EditorGridGizmos>();
@@ -67,6 +71,8 @@ fn editor_scene() -> impl SceneList {
     bsn_list! {
         @crate::camera::MainCamera {
             follow: Option::Some(#PlayerShip)
+            min_zoom: 0.5,
+            max_zoom: 5.0,
         }
         --
         DespawnOnExit<GameState>(GameState::ShipEditor)
@@ -79,7 +85,7 @@ fn editor_scene() -> impl SceneList {
         #PlayerShip
         @player_ship()
         DespawnOnEnter<GameState>(GameState::MainMenu)
-        InputMap<GameAction>
+        InputMap<PlayerShipAction>
         PlayerShipController
 
         InputMap<EditorAction>

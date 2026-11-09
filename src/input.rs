@@ -3,8 +3,9 @@ use bevy_persistent::prelude::*;
 use leafwing_input_manager::{
     Actionlike,
     input_map::InputMap,
+    input_processing::WithDualAxisProcessingPipelineExt,
     plugin::InputManagerPlugin,
-    user_input::{VirtualAxis, VirtualDPad},
+    user_input::{MouseScrollAxis, VirtualAxis, VirtualDPad},
 };
 use serde::{Deserialize, Serialize};
 
@@ -15,8 +16,9 @@ pub struct PlayerInputPlugin;
 impl Plugin for PlayerInputPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((
-            InputManagerPlugin::<GameAction>::default(),
+            InputManagerPlugin::<PlayerShipAction>::default(),
             InputManagerPlugin::<EditorAction>::default(),
+            InputManagerPlugin::<ViewAction>::default(),
         ));
 
         app.insert_resource(
@@ -36,6 +38,7 @@ impl Plugin for PlayerInputPlugin {
             (
                 init_game_keybinds,
                 init_editor_keybinds,
+                init_view_keybinds,
                 update_keybinds.run_if(resource_changed::<Persistent<Keybinds>>),
             ),
         );
@@ -43,7 +46,7 @@ impl Plugin for PlayerInputPlugin {
 }
 
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect, Serialize, Deserialize)]
-pub enum GameAction {
+pub enum PlayerShipAction {
     #[actionlike(Axis)]
     Thrust,
     #[actionlike(Axis)]
@@ -55,9 +58,6 @@ pub enum GameAction {
 
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect, Serialize, Deserialize)]
 pub enum EditorAction {
-    #[actionlike(DualAxis)]
-    MoveCamera,
-
     Place,
     RotateNext,
     RotatePrev,
@@ -75,28 +75,44 @@ pub enum EditorAction {
     Slot9,
 }
 
-impl GameAction {}
+#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect, Serialize, Deserialize)]
+pub enum ViewAction {
+    /// Move the camera at a set speed in the axis direction
+    #[actionlike(DualAxis)]
+    MoveCamera,
+    /// When pressed dragging the mouse cursor will pan the camera
+    PanCamera,
+    /// Zoom the camera by the delta in the axis value
+    #[actionlike(Axis)]
+    ZoomCamera,
+
+    OpenMap,
+    OpenPauseMenu,
+}
+
+impl PlayerShipAction {}
 
 #[derive(Resource, Serialize, Deserialize)]
 pub struct Keybinds {
-    game: InputMap<GameAction>,
+    game: InputMap<PlayerShipAction>,
     editor: InputMap<EditorAction>,
+    view: InputMap<ViewAction>,
 }
 
 impl Keybinds {
-    fn default_game_keybinds() -> InputMap<GameAction> {
+    fn default_ship_keybinds() -> InputMap<PlayerShipAction> {
         let mut input_map = InputMap::default();
 
         //TODO: leafwing-input-manager fails to deserialize GamepadAxis values
         //input_map.insert_axis(PlayerAction::Thrust, GamepadAxis::LeftStickY);
         //input_map.insert_axis(PlayerAction::Turn, GamepadAxis::LeftStickX);
-        input_map.insert(GameAction::FirePrimary, GamepadButton::West);
-        input_map.insert(GameAction::FireMissiles, GamepadButton::South);
+        input_map.insert(PlayerShipAction::FirePrimary, GamepadButton::West);
+        input_map.insert(PlayerShipAction::FireMissiles, GamepadButton::South);
 
-        input_map.insert_axis(GameAction::Thrust, VirtualAxis::ws());
-        input_map.insert_axis(GameAction::Turn, VirtualAxis::ad());
-        input_map.insert(GameAction::FirePrimary, MouseButton::Left);
-        input_map.insert(GameAction::FireMissiles, MouseButton::Right);
+        input_map.insert_axis(PlayerShipAction::Thrust, VirtualAxis::ws());
+        input_map.insert_axis(PlayerShipAction::Turn, VirtualAxis::ad());
+        input_map.insert(PlayerShipAction::FirePrimary, MouseButton::Left);
+        input_map.insert(PlayerShipAction::FireMissiles, MouseButton::Right);
 
         input_map
     }
@@ -104,7 +120,6 @@ impl Keybinds {
     fn default_editor_keybinds() -> InputMap<EditorAction> {
         let mut input_map = InputMap::default();
 
-        input_map.insert_dual_axis(EditorAction::MoveCamera, VirtualDPad::wasd());
         input_map.insert(EditorAction::Place, MouseButton::Left);
         input_map.insert(EditorAction::Remove, MouseButton::Right);
 
@@ -124,21 +139,36 @@ impl Keybinds {
 
         input_map
     }
+
+    fn default_view_keybinds() -> InputMap<ViewAction> {
+        let mut input_map = InputMap::default();
+
+        input_map.insert_dual_axis(
+            ViewAction::MoveCamera,
+            VirtualDPad::wasd().sensitivity(300.0),
+        );
+        input_map.insert_axis(ViewAction::ZoomCamera, MouseScrollAxis::Y);
+        input_map.insert(ViewAction::PanCamera, MouseButton::Middle);
+
+        input_map
+    }
 }
 
 impl Default for Keybinds {
     fn default() -> Self {
         Self {
-            game: Self::default_game_keybinds(),
+            game: Self::default_ship_keybinds(),
             editor: Self::default_editor_keybinds(),
+            view: Self::default_view_keybinds(),
         }
     }
 }
 
 fn update_keybinds(
     keybinds: Res<Persistent<Keybinds>>,
-    mut game_input_maps: Query<&mut InputMap<GameAction>>,
+    mut game_input_maps: Query<&mut InputMap<PlayerShipAction>>,
     mut editor_input_maps: Query<&mut InputMap<EditorAction>>,
+    mut view_input_maps: Query<&mut InputMap<ViewAction>>,
 ) {
     game_input_maps.iter_mut().for_each(|mut map| {
         *map = keybinds.game.clone();
@@ -147,11 +177,18 @@ fn update_keybinds(
     editor_input_maps.iter_mut().for_each(|mut map| {
         *map = keybinds.editor.clone();
     });
+
+    view_input_maps.iter_mut().for_each(|mut map| {
+        *map = keybinds.view.clone();
+    });
 }
 
 fn init_game_keybinds(
     keybinds: Res<Persistent<Keybinds>>,
-    mut player_input_maps: Query<&mut InputMap<GameAction>, Added<InputMap<GameAction>>>,
+    mut player_input_maps: Query<
+        &mut InputMap<PlayerShipAction>,
+        Added<InputMap<PlayerShipAction>>,
+    >,
 ) {
     player_input_maps.iter_mut().for_each(|mut map| {
         *map = keybinds.game.clone();
@@ -164,5 +201,14 @@ fn init_editor_keybinds(
 ) {
     editor_input_maps.iter_mut().for_each(|mut map| {
         *map = keybinds.editor.clone();
+    });
+}
+
+fn init_view_keybinds(
+    keybinds: Res<Persistent<Keybinds>>,
+    mut editor_input_maps: Query<(&Name, &mut InputMap<ViewAction>), Added<InputMap<ViewAction>>>,
+) {
+    editor_input_maps.iter_mut().for_each(|mut map| {
+        *map.1 = keybinds.view.clone();
     });
 }
