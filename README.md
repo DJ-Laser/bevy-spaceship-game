@@ -8,16 +8,20 @@ I plan to add many different parts you can use to build your ships, and ship dam
 
 Play here: https://github.com/DJ-Laser/bevy-spaceship-game
 
-Current features include:
+### Controls:
+
+Editor camera: WASD or middle mouse drag
+Editor placement: left click
+
 Movement - WASD
 Weapons - Click
-Static asteroids to destroy
-Enemy ship that can destroy you
+Camera Zoom: Scroll wheel
 
 ### Roadmap:
 
-- Add ship upgrades menu
-- Add grid-based ship builder
+- Add planets and space stations
+- Make ship editor diagetic instead of an entirely seperate game state
+- Add saving for ships and game progress
 - Add smart controller for ally and enemy npc ships
 - Chose a cohesive art style instead of using placeholder assets
 
